@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Life OS</title>
+  <meta name="theme-color" content="#F4F4F1">
+  <meta name="description" content="Bohdan’s personal workspace">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Life OS">
+  <script src="themes.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-house" viewBox="0 0 24 24"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/> <path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+    <symbol id="i-list-todo" viewBox="0 0 24 24"><rect x="3" y="5" width="6" height="6" rx="1"/> <path d="m3 17 2 2 4-4"/> <path d="M13 6h8"/> <path d="M13 12h8"/> <path d="M13 18h8"/></symbol>
+    <symbol id="i-calendar-days" viewBox="0 0 24 24"><path d="M8 2v4"/> <path d="M16 2v4"/> <rect width="18" height="18" x="3" y="4" rx="2"/> <path d="M3 10h18"/> <path d="M8 14h.01"/> <path d="M12 14h.01"/> <path d="M16 14h.01"/> <path d="M8 18h.01"/> <path d="M12 18h.01"/> <path d="M16 18h.01"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-folder-plus" viewBox="0 0 24 24"><path d="M12 10v6"/> <path d="M9 13h6"/> <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/> <path d="M12 5v14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/> <circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-panel-left" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/> <path d="M9 3v18"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/> <path d="m6 6 12 12"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/> <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/> <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/> <line x1="10" x2="10" y1="11" y2="17"/> <line x1="14" x2="14" y1="11" y2="17"/></symbol>
+    <symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/> <circle cx="19" cy="12" r="1"/> <circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/> <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/> <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/> <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/> <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/> <path d="M12 16v-4"/> <path d="M12 8h.01"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/> <path d="M12 2v2"/> <path d="M12 20v2"/> <path d="m4.93 4.93 1.41 1.41"/> <path d="m17.66 17.66 1.41 1.41"/> <path d="M2 12h2"/> <path d="M20 12h2"/> <path d="m6.34 17.66-1.41 1.41"/> <path d="m19.07 4.93-1.41 1.41"/></symbol>
+    <symbol id="i-cloud-sun" viewBox="0 0 24 24"><path d="M12 2v2"/> <path d="m4.93 4.93 1.41 1.41"/> <path d="M20 12h2"/> <path d="m19.07 4.93-1.41 1.41"/> <path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/> <path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></symbol>
+    <symbol id="i-cloud-fog" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/> <path d="M16 17H7"/> <path d="M17 21H9"/></symbol>
+    <symbol id="i-cloud-drizzle" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/> <path d="M8 19v1"/> <path d="M8 14v1"/> <path d="M16 19v1"/> <path d="M16 14v1"/> <path d="M12 21v1"/> <path d="M12 16v1"/></symbol>
+    <symbol id="i-cloud-rain" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/> <path d="M16 14v6"/> <path d="M8 14v6"/> <path d="M12 16v6"/></symbol>
+    <symbol id="i-cloud-snow" viewBox="0 0 24 24"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/> <path d="M8 15h.01"/> <path d="M8 19h.01"/> <path d="M12 17h.01"/> <path d="M12 21h.01"/> <path d="M16 15h.01"/> <path d="M16 19h.01"/></symbol>
+    <symbol id="i-cloud-lightning" viewBox="0 0 24 24"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"/> <path d="m13 12-3 5h4l-3 5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M8 2v4"/> <path d="M16 2v4"/> <rect width="18" height="18" x="3" y="4" rx="2"/> <path d="M3 10h18"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/> <path d="m15 5 4 4"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><line x1="4" x2="20" y1="12" y2="12"/> <line x1="4" x2="20" y1="6" y2="6"/> <line x1="4" x2="20" y1="18" y2="18"/></symbol>
+    <symbol id="i-hard-drive" viewBox="0 0 24 24"><line x1="22" x2="2" y1="12" y2="12"/> <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/> <line x1="6" x2="6.01" y1="16" y2="16"/> <line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
+    <symbol id="i-notebook-pen" viewBox="0 0 24 24"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/> <path d="M2 6h4"/> <path d="M2 10h4"/> <path d="M2 14h4"/> <path d="M2 18h4"/> <path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/></symbol>
+    <symbol id="i-calendar-clock" viewBox="0 0 24 24"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/> <path d="M16 2v4"/> <path d="M8 2v4"/> <path d="M3 10h5"/> <path d="M17.5 17.5 16 16.3V14"/> <circle cx="16" cy="16" r="6"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/> <path d="M14 2v4a2 2 0 0 0 2 2h4"/> <path d="M10 9H8"/> <path d="M16 13H8"/> <path d="M16 17H8"/></symbol>
+    <symbol id="i-file-plus" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/> <path d="M14 2v4a2 2 0 0 0 2 2h4"/> <path d="M9 15h6"/> <path d="M12 18v-6"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/> <path d="M12 19V5"/></symbol>
+    <symbol id="i-circle-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/> <line x1="12" x2="12" y1="8" y2="12"/> <line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+    <symbol id="i-graduation-cap" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/> <path d="M22 10v6"/> <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+    <symbol id="i-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/> <path d="m3 7 2 2 4-4"/> <path d="M13 6h8"/> <path d="M13 12h8"/> <path d="M13 18h8"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/> <line x1="12" x2="15" y1="14" y2="11"/> <circle cx="12" cy="14" r="8"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="14" y="4" width="4" height="16" rx="1"/> <rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/> <path d="M3 3v5h5"/></symbol>
+    <symbol id="i-skip-forward" viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4"/> <line x1="19" x2="19" y1="5" y2="19"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/> <circle cx="12" cy="12" r="6"/> <circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-sliders-horizontal" viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/> <line x1="10" x2="3" y1="4" y2="4"/> <line x1="21" x2="12" y1="12" y2="12"/> <line x1="8" x2="3" y1="12" y2="12"/> <line x1="21" x2="16" y1="20" y2="20"/> <line x1="12" x2="3" y1="20" y2="20"/> <line x1="14" x2="14" y1="2" y2="6"/> <line x1="8" x2="8" y1="10" y2="14"/> <line x1="16" x2="16" y1="18" y2="22"/></symbol>
+  </svg>
+
+  <div class="app" id="app">
+    <aside class="sidebar" id="sidebar" aria-label="Menu">
+      <div class="side-top">
+        <span class="wordmark">Life OS</span>
+        <button class="ibtn" id="sideCollapse" type="button" title="Hide sidebar" aria-label="Hide sidebar"><svg class="ic"><use href="#i-panel-left"/></svg></button>
+      </div>
+
+      <nav class="side-nav" id="sideNav">
+        <a class="nav-item" href="#home" data-route="home"><svg class="ic"><use href="#i-house"/></svg><span>Home</span></a>
+        <a class="nav-item" href="#focus" data-route="focus"><svg class="ic"><use href="#i-timer"/></svg><span>Focus</span><span class="count" id="cntFocus"></span></a>
+
+        <div class="nav-group" id="grpTasks">
+          <button class="group-head" type="button" aria-expanded="true" aria-controls="grpTasksBody">
+            <svg class="ic caret"><use href="#i-chevron-down"/></svg><span>Tasks</span>
+          </button>
+          <div class="group-body" id="grpTasksBody">
+            <a class="nav-item" href="#todos" data-route="todos"><svg class="ic"><use href="#i-list-todo"/></svg><span>To-dos</span><span class="count" id="cntTodos"></span></a>
+            <a class="nav-item" href="#week" data-route="week"><svg class="ic"><use href="#i-calendar-days"/></svg><span>This week</span><span class="count" id="cntWeek"></span></a>
+
+            <div class="sub-head">
+              <span>Projects</span>
+              <button class="ibtn sm" id="newProjectBtn" type="button" title="New project" aria-label="New project"><svg class="ic"><use href="#i-plus"/></svg></button>
+            </div>
+            <div id="projectList"></div>
+            <form class="new-project" id="newProjectForm" hidden>
+              <svg class="ic"><use href="#i-folder"/></svg>
+              <input id="newProjectInput" type="text" placeholder="Project name" autocomplete="off" maxlength="80">
+            </form>
+          </div>
+        </div>
+        <div class="nav-group" id="grpSchool">
+          <button class="group-head" type="button" aria-expanded="true" aria-controls="grpSchoolBody">
+            <svg class="ic caret"><use href="#i-chevron-down"/></svg><span>School</span>
+          </button>
+          <div class="group-body" id="grpSchoolBody">
+            <a class="nav-item" href="#timetable" data-route="timetable"><svg class="ic"><use href="#i-calendar-clock"/></svg><span>Timetable</span></a>
+            <a class="nav-item" href="#homework" data-route="homework"><svg class="ic"><use href="#i-notebook-pen"/></svg><span>Homework</span><span class="count" id="cntHw"></span></a>
+            <button class="sub-head sub-toggle" id="subjToggle" type="button" aria-expanded="true" aria-controls="subjectList">
+              <span>Subjects</span><svg class="ic caret"><use href="#i-chevron-down"/></svg>
+            </button>
+            <div id="subjectList"></div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="side-bottom">
+        <button class="nav-item" id="openSettings" type="button"><svg class="ic"><use href="#i-settings"/></svg><span>Settings</span></button>
+      </div>
+    </aside>
+
+    <div class="scrim" id="scrim" hidden></div>
+
+    <section class="main">
+      <header class="main-head">
+        <button class="ibtn" id="sideToggle" type="button" title="Menu" aria-label="Open menu" aria-controls="sidebar"><svg class="ic"><use href="#i-panel-left"/></svg></button>
+        <a class="back" id="backBtn" href="#home" hidden><svg class="ic"><use href="#i-chevron-left"/></svg><span id="backLabel">Back</span></a>
+        <nav class="crumbs" id="crumbs" aria-label="Breadcrumb"></nav>
+        <div class="head-actions" id="headActions"></div>
+      </header>
+      <div class="view" id="view" tabindex="-1"></div>
+      <footer class="status" id="status"></footer>
+    </section>
+
+    <aside class="detail" id="detail" aria-label="Details" hidden></aside>
+  </div>
+
+  <nav class="tabbar" id="tabbar" aria-label="Sections">
+    <a href="#home" data-tab="home"><svg class="ic"><use href="#i-house"/></svg><span>Home</span></a>
+    <a href="#tasks" data-tab="tasks"><svg class="ic"><use href="#i-list-checks"/></svg><span>Tasks</span></a>
+    <a href="#focus" data-tab="focus"><svg class="ic"><use href="#i-timer"/></svg><span>Focus</span></a>
+    <a href="#school" data-tab="school"><svg class="ic"><use href="#i-graduation-cap"/></svg><span>School</span></a>
+    <button type="button" id="tabSettings"><svg class="ic"><use href="#i-settings"/></svg><span>Settings</span></button>
+  </nav>
+
+  <div class="modal-wrap" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <div class="modal">
+      <nav class="modal-nav" aria-label="Settings sections">
+        <div class="modal-nav-title" id="settingsTitle">Settings</div>
+        <button type="button" class="nav-item" data-pane="look"><svg class="ic sq sq-blue"><use href="#i-palette"/></svg><span>Appearance</span></button>
+        <button type="button" class="nav-item" data-pane="data"><svg class="ic sq sq-gray"><use href="#i-hard-drive"/></svg><span>Data</span></button>
+        <button type="button" class="nav-item" data-pane="about"><svg class="ic sq sq-gray"><use href="#i-info"/></svg><span>About</span></button>
+      </nav>
+      <div class="modal-body">
+        <button class="ibtn modal-close" id="closeSettings" type="button" aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+        <div class="pane" data-pane="look">
+          <h2>Appearance</h2>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name">Layout</div>
+              <div class="setting-desc">Simple: tab bar on the phone, large titles, details open as a sheet. Obsidian: sidebar tree, breadcrumbs, details in a side panel.</div>
+            </div>
+          </div>
+          <div class="layout-grid" id="layoutGrid" role="radiogroup" aria-label="Layout"></div>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name">Theme</div>
+              <div class="setting-desc">“Auto” switches between light and dark with your system.</div>
+            </div>
+          </div>
+          <div class="theme-grid" id="themeGrid" role="radiogroup" aria-label="Theme"></div>
+        </div>
+        <div class="pane" data-pane="data" hidden>
+          <h2>Data</h2>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name">Where your data is stored</div>
+              <div class="setting-desc">For now only on this device, in the browser. Sync between phone and computer comes next.</div>
+            </div>
+            <span class="pill" id="dataStat"></span>
+          </div>
+        </div>
+        <div class="pane" data-pane="about" hidden>
+          <h2>About</h2>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name">Life OS</div>
+              <div class="setting-desc">Version 0.7 · Minimal design · Home, Focus, Tasks, School</div>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name">Keyboard shortcuts</div>
+              <div class="setting-desc"><kbd>Ctrl</kbd> <kbd>,</kbd> settings · <kbd>Ctrl</kbd> <kbd>\</kbd> sidebar · <kbd>N</kbd> new item · <kbd>Space</kbd> start or pause the focus timer · <kbd>Esc</kbd> close</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
