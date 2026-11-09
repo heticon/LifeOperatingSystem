@@ -41,3 +41,21 @@ create policy "own rows" on public.items
 do $$ begin
   alter publication supabase_realtime add table public.items;
 exception when duplicate_object then null; end $$;
+
+-- ---------------------------------------------------------------------------
+-- Google Calendar (roadmap step 4)
+-- The refresh token is a secret: row-level security is on and there is NO policy,
+-- so browsers (anon / authenticated) can never read it. Only the Edge Functions
+-- (service role) use this table. Calendars and events go into items.
+create table if not exists public.connections (
+  user_id       uuid        not null references auth.users on delete cascade,
+  provider      text        not null,              -- google
+  account       text,                              -- the Google email
+  refresh_token text        not null,
+  synced_at     timestamptz,
+  last_error    text,
+  created_at    timestamptz not null default now(),
+  primary key (user_id, provider)
+);
+alter table public.connections enable row level security;
+revoke all on public.connections from anon, authenticated;

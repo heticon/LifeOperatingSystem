@@ -151,6 +151,7 @@
         <div class="modal-nav-title" id="settingsTitle">Settings</div>
         <button type="button" class="nav-item" data-pane="account"><svg class="ic sq sq-gray"><use href="#i-circle-user"/></svg><span>Account</span></button>
         <button type="button" class="nav-item" data-pane="look"><svg class="ic sq sq-blue"><use href="#i-palette"/></svg><span>Appearance</span></button>
+        <button type="button" class="nav-item" data-pane="calendar"><svg class="ic sq sq-gray"><use href="#i-calendar"/></svg><span>Calendar</span></button>
         <button type="button" class="nav-item" data-pane="data"><svg class="ic sq sq-gray"><use href="#i-hard-drive"/></svg><span>Data</span></button>
         <button type="button" class="nav-item" data-pane="about"><svg class="ic sq sq-gray"><use href="#i-info"/></svg><span>About</span></button>
       </nav>
@@ -190,6 +191,17 @@
           </div>
           <div class="theme-grid" id="themeGrid" role="radiogroup" aria-label="Theme"></div>
         </div>
+        <div class="pane" data-pane="calendar" hidden>
+          <h2>Calendar</h2>
+          <div class="setting">
+            <div class="setting-info">
+              <div class="setting-name" id="gName">Google Calendar</div>
+              <div class="setting-desc" id="gDesc">Show events from your Google calendars on Home and in This week. Read-only.</div>
+            </div>
+            <div class="setting-btns" id="gBtns"></div>
+          </div>
+          <div class="cal-list" id="gCals"></div>
+        </div>
         <div class="pane" data-pane="data" hidden>
           <h2>Data</h2>
           <div class="setting">
@@ -212,7 +224,7 @@
           <div class="setting">
             <div class="setting-info">
               <div class="setting-name">Life OS</div>
-              <div class="setting-desc">Version 0.8 · Sync across devices · Home, Focus, Tasks, School</div>
+              <div class="setting-desc">Version 0.9 · Google Calendar · Sync across devices · Home, Focus, Tasks, School</div>
             </div>
           </div>
           <div class="setting">

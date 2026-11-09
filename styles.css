@@ -1334,3 +1334,31 @@ html[data-layout] .setting .btn { flex: none; white-space: nowrap; }
   /* the close button sits over the scrolling strip: give it the strip's surface so labels slide under it cleanly */
   html[data-layout] .modal-close { background: var(--side); width: 44px; height: 44px; }
 }
+
+/* ---------- Google Calendar: event rows (This week), Settings → Calendar ---------- */
+html[data-layout] .task.ev { color: var(--fg); text-decoration: none; cursor: pointer; }
+html[data-layout] .ev-time {
+  flex: none; width: 96px; padding-top: 2px; font-family: var(--mono); font-size: 13px; font-weight: 500;
+  color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+html[data-layout] .task.ev .task-meta { flex-wrap: wrap; row-gap: 4px; white-space: normal; }
+html[data-layout] .task.ev .task-meta span:not(.subj) { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+html[data-layout] .task.ev:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+html[data-layout] .setting-btns { flex: none; display: flex; gap: 8px; }
+html[data-layout] .cal-head { padding: 24px 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); }
+html[data-layout] .cal-row {
+  width: 100%; min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 8px;
+  border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--fg);
+  font: inherit; font-size: 15px; text-align: left; cursor: pointer;
+}
+html[data-layout] .cal-row:hover { background: var(--hover); }
+html[data-layout] .cal-row:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+html[data-layout] .cal-row .check { margin-top: 0; }
+html[data-layout] .cal-row[aria-checked="true"] .check { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+html[data-layout] .cal-row > i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+html[data-layout] .cal-row > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 860px) {
+  html[data-layout] .ev-time { width: 80px; }
+  html[data-layout] .setting:has(> .setting-btns) { flex-wrap: wrap; }
+  html[data-layout] .cal-row { min-height: 48px; }
+}

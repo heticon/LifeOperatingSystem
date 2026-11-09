@@ -304,6 +304,7 @@
     $("view").innerHTML =
       '<div class="page home home-side">' + date + '<div class="clock-row">' + clock + meta + "</div>" +
         '<div class="hprops">' +
+          calFact() +
           '<div class="hp"><span class="hk">' + icon("calendar-clock") + 'School</span><span class="hv">' + schoolFact() + "</span></div>" +
           '<div class="hp"><span class="hk">' + icon("notebook-pen") + 'Homework</span><span class="hv">' + hwFact() + "</span></div>" +
           focusFact() +
@@ -462,12 +463,12 @@
     function sortIn(list) {
       return list.sort(function (a, b) { return (a.done - b.done) || (a.createdAt - b.createdAt); });
     }
-    function group(gkey, label, date, list, cls, tag, hws) {
+    function group(gkey, label, date, list, cls, tag, hws, evs) {
       return '<section class="group' + (cls ? " " + cls : "") + '">' +
         '<div class="group-title"><span class="gt">' + label + "</span>" + (date ? '<span class="gd">' + date + "</span>" : "") +
         (tag ? '<span class="tag">' + tag + "</span>" : "") +
         '<button type="button" class="ibtn sm gadd" data-group-add="' + gkey + '" title="Add task" aria-label="Add task: ' + label + '">' + icon("plus") + "</button></div>" +
-        '<div class="list">' + sortIn(list).map(function (t) { return taskRow(t, "week"); }).join("") +
+        '<div class="list">' + (evs || "") + sortIn(list).map(function (t) { return taskRow(t, "week"); }).join("") +
           (hws || []).sort(function (a, b) { return a.done - b.done; }).map(function (h) { return hwRow(h, "week"); }).join("") + "</div>" +
         addRow(gkey, "New task", true).replace("<form ", ui.addingGroup === gkey ? "<form " : "<form hidden ") + "</section>";
     }
@@ -488,7 +489,8 @@
       var past = ui.weekOffset < 0 || (ui.weekOffset === 0 && i < tIdx);
       var dayIso = isoDate(d);
       var hws = hwList().filter(function (h) { return h.plan === dayIso; });
-      html += group("week:" + key + ":" + i, DAYS[i], fmtDayMonth.format(d), list, past ? "past" : "", i === tIdx ? "Today" : "", hws);
+      var evs = eventsOn(d).map(function (e) { return evRow(e, d); }).join("");
+      html += group("week:" + key + ":" + i, DAYS[i], fmtDayMonth.format(d), list, past ? "past" : "", i === tIdx ? "Today" : "", hws, evs);
     }
     $("view").innerHTML = html + "</div>";
   }
@@ -1465,6 +1467,146 @@
     return '<div class="hp"><span class="hk">' + icon("timer") + 'Focus</span><span class="hv"><a href="#focus" id="factFocus">' + txt + "</a></span></div>";
   }
 
+
+  /* =========================================================
+     Google Calendar (лише читання). Події кладе в items серверна функція google-sync;
+     тут вони лежать у Store.data.other: gconn (стан), gcal:* (календарі), gev:* (події).
+     ========================================================= */
+  var GOOGLE_CLIENT_ID = "";
+  var GOOGLE_SCOPE = "openid email https://www.googleapis.com/auth/calendar.readonly";
+  var gui = { busy: "", error: "" };
+
+  function otherOf(kind) {
+    var o = Store.data.other || {};
+    return Object.keys(o).filter(function (id) { return o[id] && o[id].k === kind; }).map(function (id) { return o[id].d; });
+  }
+  function gconn() { var e = (Store.data.other || {}).gconn; return e && e.k === "connection" ? e.d : null; }
+  function calendars() {
+    return otherOf("calendar").sort(function (a, b) { return (b.primary - a.primary) || a.name.localeCompare(b.name); });
+  }
+  function calMap() { var m = {}; calendars().forEach(function (c) { m[c.cal] = c; }); return m; }
+  function parseDay(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  // початок і кінець події як Date; у подій на весь день кінець — наступний день (не включно)
+  function evSpan(e) { return e.allDay ? [parseDay(e.start), parseDay(e.end)] : [new Date(e.start), new Date(e.end)]; }
+  // події увімкнених календарів, що перетинають день d
+  function eventsOn(d) {
+    var cm = calMap(), d0 = startOfDay(d), d1 = addDays(d0, 1);
+    return otherOf("event").filter(function (e) {
+      var c = cm[e.cal]; if (!c || c.on === false) return false;
+      var sp = evSpan(e); return sp[0] < d1 && sp[1] > d0;
+    }).sort(function (a, b) { return (b.allDay - a.allDay) || (evSpan(a)[0] - evSpan(b)[0]) || a.title.localeCompare(b.title); });
+  }
+  function evTime(e, d) {
+    if (e.allDay) return "All day";
+    var sp = evSpan(e), d0 = startOfDay(d), d1 = addDays(d0, 1);
+    if (sp[0] < d0 && sp[1] >= d1) return "All day";
+    if (sp[0] < d0) return "until " + hhmm(sp[1]);
+    return hhmm(sp[0]) + (sp[1] < d1 && sp[1] > sp[0] ? "–" + hhmm(sp[1]) : "");
+  }
+  function evRow(e, d) {
+    var c = calMap()[e.cal] || {};
+    var meta = '<span class="subj"><i style="background:' + esc(c.color || "#888") + '"></i>' + esc(c.name || "") + "</span>";
+    if (e.location) meta += "<span>" + esc(e.location) + "</span>";
+    var tag = e.link ? "a" : "div";
+    return "<" + tag + ' class="task ev"' + (e.link ? ' href="' + esc(e.link) + '" target="_blank" rel="noopener"' : "") + ">" +
+      '<span class="ev-time">' + evTime(e, d) + "</span>" +
+      '<span class="task-main"><span class="task-title">' + esc(e.title) + '</span><span class="task-meta">' + meta + "</span></span></" + tag + ">";
+  }
+  function calFact() {
+    if (!gconn()) return "";
+    var now = new Date(), list = eventsOn(now).filter(function (e) { return e.allDay || evSpan(e)[1] > now; });
+    var txt;
+    if (!list.length) txt = "Nothing else today";
+    else {
+      var cur = list.filter(function (e) { return !e.allDay && evSpan(e)[0] <= now; })[0];
+      var nxt = cur || list.filter(function (e) { return !e.allDay; })[0] || list[0];
+      txt = cur ? "Now <b>" + esc(cur.title) + "</b> · until " + hhmm(evSpan(cur)[1])
+        : nxt.allDay ? "<b>" + esc(nxt.title) + "</b> · all day"
+        : "<b>" + esc(nxt.title) + "</b> at " + hhmm(evSpan(nxt)[0]);
+      var more = list.length - 1;
+      if (more) txt += " · " + more + " more today";
+    }
+    return '<div class="hp"><span class="hk">' + icon("calendar") + 'Calendar</span><span class="hv"><a href="#week">' + txt + "</a></span></div>";
+  }
+
+  /* ---------- Settings → Calendar ---------- */
+  function redirectUri() { return location.origin + location.pathname; }
+  function renderCalendarPane() {
+    var c = gconn(), on = window.LifeSync && window.LifeSync.status().email;
+    var btns = "", desc;
+    if (gui.busy) desc = gui.busy;
+    else if (!c) desc = "Show events from your Google calendars on Home and in This week. Read-only.";
+    else if (c.error) desc = '<span class="late">' + esc(c.error) + "</span>";
+    else desc = "Synced at " + shortWhen(Date.parse(c.at)) + " · updates every 15 minutes";
+    if (gui.error) desc += '<br><span class="late">' + esc(gui.error) + "</span>";
+    if (!c) btns = '<button class="btn solid" type="button" data-g="connect"' + (on && !gui.busy ? "" : " disabled") + ">Connect</button>";
+    else btns = '<button class="btn" type="button" data-g="refresh"' + (gui.busy ? " disabled" : "") + ">Refresh</button>" +
+      '<button class="btn danger" type="button" data-g="disconnect"' + (gui.busy ? " disabled" : "") + ">Disconnect</button>";
+    $("gName").textContent = c ? c.account || "Google Calendar" : "Google Calendar";
+    $("gDesc").innerHTML = on ? desc : "Sign in to Life OS first.";
+    $("gBtns").innerHTML = btns;
+    var cals = c ? calendars() : [];
+    $("gCals").innerHTML = cals.length ? '<div class="cal-head">Show calendars</div>' + cals.map(function (k) {
+      var checked = k.on !== false;
+      return '<button type="button" class="cal-row" role="checkbox" aria-checked="' + checked + '" data-gcal="' + esc(k.cal) + '">' +
+        '<span class="check">' + icon("check") + '</span><i style="background:' + esc(k.color) + '"></i><span>' + esc(k.name) + "</span></button>";
+    }).join("") : "";
+  }
+  function gRun(label, fn) {
+    gui.busy = label; gui.error = ""; renderCalendarPane();
+    return Promise.resolve().then(fn).catch(function (err) { gui.error = (err && err.message) || "Something went wrong."; })
+      .then(function () { gui.busy = ""; window.LifeSync.syncNow(); renderCalendarPane(); });
+  }
+  function gConnect() {
+    if (!GOOGLE_CLIENT_ID) { gui.error = "Google sign-in isn’t set up yet."; renderCalendarPane(); return; }
+    var state = uid() + uid();
+    try { sessionStorage.setItem("lifeos.gstate", state); } catch (e) {}
+    location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID, redirect_uri: redirectUri(), response_type: "code", scope: GOOGLE_SCOPE,
+      access_type: "offline", prompt: "consent", include_granted_scopes: "true", state: state
+    }).toString();
+  }
+  // Повернення з Google: ?code=…&state=… → прибираємо з адреси й міняємо код на доступ (на сервері)
+  var gReturn = (function () {
+    var q = new URLSearchParams(location.search);
+    if (!q.has("state") || !(q.has("code") || q.has("error"))) return null;
+    var want = null; try { want = sessionStorage.getItem("lifeos.gstate"); sessionStorage.removeItem("lifeos.gstate"); } catch (e) {}
+    history.replaceState(null, "", location.pathname + location.hash);
+    if (!want || want !== q.get("state")) return { error: "Google sign-in expired. Try again." };
+    if (q.has("error")) return { error: q.get("error") === "access_denied" ? "Google access wasn’t allowed." : "Google sign-in failed." };
+    return { code: q.get("code") };
+  })();
+  function finishGoogleReturn() {
+    if (!gReturn || !window.LifeSync || !window.LifeSync.status().email) return;
+    var r = gReturn; gReturn = null;
+    openSettings("calendar");
+    if (r.error) { gui.error = r.error; renderCalendarPane(); return; }
+    gRun("Connecting…", function () {
+      return window.LifeSync.call("google-connect", { action: "exchange", code: r.code, redirect_uri: redirectUri() }).then(function (res) {
+        if (res && res.ok === false && res.error) throw new Error(res.error);
+      });
+    });
+  }
+  $("settings").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-g]");
+    if (b) {
+      var a = b.getAttribute("data-g");
+      if (a === "connect") gConnect();
+      if (a === "refresh") gRun("Refreshing…", function () {
+        return window.LifeSync.call("google-sync").then(function (res) { if (res && res.ok === false && res.error) throw new Error(res.error); });
+      });
+      if (a === "disconnect" && confirm("Disconnect Google Calendar? Events disappear from Life OS on all devices. Your Google calendars stay as they are.")) {
+        gRun("Disconnecting…", function () { return window.LifeSync.call("google-connect", { action: "disconnect" }); });
+      }
+      return;
+    }
+    var row = e.target.closest("[data-gcal]");
+    if (row) {
+      var o = Store.data.other["gcal:" + row.getAttribute("data-gcal")];
+      if (o) { o.d.on = o.d.on === false; Store.save(); renderCalendarPane(); renderAll(); }
+    }
+  });
+
   /* =========================================================
      Hubs (Apple layout on the phone), back button, tab bar, layout picker
      ========================================================= */
@@ -1602,15 +1744,15 @@
       b.setAttribute("aria-current", String(b.getAttribute("data-pane") === name));
     });
   }
-  function openSettings() {
+  function openSettings(pane) {
     if (isNarrow()) setSidebar(false);
     renderThemes(); renderLayouts();
     var n = tasks().length, m = projects().length;
     var hn = hwList().length, nn = notesList().length;
     $("dataStat").textContent = n + " " + plural(n, "task", "tasks") + " · " + m + " " + plural(m, "project", "projects") +
       " · " + hn + " homework · " + nn + " " + plural(nn, "note", "notes");
-    renderAccount();
-    showPane("look");
+    renderAccount(); renderCalendarPane();
+    showPane(typeof pane === "string" ? pane : "look");
     $("settings").hidden = false;
     var sel = document.querySelector('.theme-card[aria-checked="true"]'); if (sel) sel.focus();
   }
@@ -1760,9 +1902,9 @@
         renderWhenIdle();
       },
       backup: function () { ls("lifeos.data.backup", { at: Date.now(), data: Store.data }); },
-      onStatus: renderAccount,
+      onStatus: function () { renderAccount(); if (!$("settings").hidden) renderCalendarPane(); },
       onSignedOut: function () { showAuth(true); }
-    });
+    }).then(finishGoogleReturn);
   }
   $("authForm").addEventListener("submit", function (e) {
     e.preventDefault();
@@ -1771,7 +1913,7 @@
     if (!navigator.onLine) { $("authErr").textContent = "You’re offline. Connect to the internet to sign in."; return; }
     $("authErr").textContent = ""; $("authBtn").disabled = true; $("authBtn").textContent = "Signing in…";
     window.LifeSync.signIn(email, pass).then(function () {
-      $("authPass").value = ""; showAuth(false); renderAll(); renderAccount();
+      $("authPass").value = ""; showAuth(false); renderAll(); renderAccount(); finishGoogleReturn();
     }, function (err) {
       var m = (err && err.message) || "";
       $("authErr").textContent = /invalid/i.test(m) ? "Wrong email or password." : (m || "Couldn’t sign in. Try again.");
@@ -1828,5 +1970,5 @@
     });
   }
 
-  window.__lifeos = { isoWeek: isoWeek, weeksInYear: weeksInYear, Store: Store };
+  window.__lifeos = { isoWeek: isoWeek, weeksInYear: weeksInYear, Store: Store, eventsOn: eventsOn, evTime: evTime, calFact: calFact };
 })();

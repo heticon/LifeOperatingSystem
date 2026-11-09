@@ -1,0 +1,8 @@
+# Only what the Supabase CLI needs to deploy the Edge Functions.
+project_id = "ulezusdpxglednvswkyk"
+
+[functions.google-connect]
+verify_jwt = false   # the function checks the user itself (works with the new publishable keys)
+
+[functions.google-sync]
+verify_jwt = false   # pg_cron calls it without a user

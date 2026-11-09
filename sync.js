@@ -200,6 +200,17 @@
     },
     changed: changed,
     syncNow: sync,
+    // виклик Edge Function від імені користувача (напр. google-connect)
+    call: async function (name, body) {
+      if (!client || !user) throw new Error("Sign in first");
+      var res = await client.functions.invoke(name, { body: body || {} });
+      if (res.error) {
+        var msg = res.error.message;
+        try { var j = await res.error.context.json(); if (j && j.error) msg = j.error; } catch (e) { /* no JSON body */ }
+        throw new Error(msg);
+      }
+      return res.data;
+    },
     status: function () { return { state: status.state, at: status.at, error: status.error, pending: pending(), email: user ? user.email : null }; }
   };
   window.LifeSync = api;
