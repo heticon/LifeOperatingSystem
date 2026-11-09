@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life OS · Privacy</title>
+<style>
+  :root { --bg: #F4F4F1; --fg: #0C0C09; --muted: #5F5F59; --line: #DCDCD6; --link: #312C85; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111110; --fg: #EDEDEA; --muted: #A3A39D; --line: #2A2A27; --link: #A9A4F5; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 -apple-system, "Open Sans", system-ui, sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 64px 16px; }
+  h1 { font-size: 40px; line-height: 1.1; letter-spacing: -0.03em; margin: 0 0 8px; }
+  h2 { font-size: 20px; margin: 32px 0 8px; }
+  p, li { color: var(--muted); }
+  a { color: var(--link); }
+  .meta { font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy</h1>
+  <p class="meta">Life OS · last updated 9 November 2026</p>
+
+  <p>Life OS is a personal dashboard built and used by one person. It is not a commercial service and has no other users.</p>
+
+  <h2>Google Calendar</h2>
+  <ul>
+    <li>Life OS asks for read-only access to Google Calendar (<code>calendar.readonly</code>) and your email address.</li>
+    <li>It reads your calendar list and events from 4 weeks ago to 4 weeks ahead, and shows them on Home and in This week.</li>
+    <li>It never creates, changes or deletes anything in Google Calendar.</li>
+    <li>Events are stored in your own Life OS account (Supabase, EU region London) so every device you sign in on sees them. Row-level security keeps them visible only to you.</li>
+    <li>The Google access token is stored only on the server and is never sent to the browser.</li>
+    <li>Data is not sold, shared, used for ads or used to train AI models.</li>
+  </ul>
+
+  <h2>Removing access</h2>
+  <p>Settings → Calendar → Disconnect revokes access and removes all calendar data from Life OS. You can also remove access at <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</p>
+
+  <p>Life OS’s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+  <p><a href="./">Back to Life OS</a></p>
+</main>
+</body>
+</html>
