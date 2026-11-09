@@ -1714,15 +1714,18 @@
      ========================================================= */
   var pendingRender = false;
   function renderWhenIdle() {
-    var a = document.activeElement;
-    if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !a.closest("#auth")) {
+    var a = document.activeElement, field = a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !a.closest("#auth");
+    // хтось друкує — не чіпаємо екран, оновимо, коли поле втратить фокус
+    if (field && a.value) {
       if (!pendingRender) {
         pendingRender = true;
         a.addEventListener("blur", function () { pendingRender = false; renderAll(); }, { once: true });
       }
       return;
     }
+    var key = field ? (a.id ? "#" + a.id : a.getAttribute("placeholder") ? '[placeholder="' + a.getAttribute("placeholder") + '"]' : null) : null;
     renderAll();
+    if (key) { var again = document.querySelector(key); if (again && again !== document.activeElement) again.focus(); }
   }
   function syncLine(st) {
     var n = st.pending, waiting = n ? " · " + n + " " + plural(n, "change", "changes") + " waiting" : "";

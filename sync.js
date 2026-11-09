@@ -37,6 +37,11 @@
   var flushTimer = null, busy = false, again = false;
 
   function saveState() { ls("lifeos.synced", snap); ls("lifeos.outbox", outbox); ls("lifeos.lastPull", lastPull); }
+  // немає мережі (або сервер недоступний) — це «Offline», а не помилка
+  function failState(e) {
+    var m = (e && e.message) || "";
+    return !navigator.onLine || /fetch|network|load failed/i.test(m) ? "offline" : "error";
+  }
   function pending() { return Object.keys(outbox).length; }
   function setStatus(state, err) {
     status.state = state; status.error = err || null;
@@ -124,7 +129,7 @@
       applyRows(await pullAll(lastPull), false);
       setStatus("synced");
     } catch (e) {
-      setStatus(navigator.onLine ? "error" : "offline", e && e.message);
+      setStatus(failState(e), e && e.message);
     } finally {
       busy = false;
       if (again) { again = false; sync(); }
@@ -180,7 +185,7 @@
       setInterval(function () { if (document.visibilityState === "visible") sync(); }, 60000);
       var res = await client.auth.getSession();
       var s = res.data && res.data.session;
-      if (s) { try { await start(s); } catch (e) { setStatus(navigator.onLine ? "error" : "offline", e && e.message); } }
+      if (s) { try { await start(s); } catch (e) { setStatus(failState(e), e && e.message); } }
       else if (hooks.onSignedOut) hooks.onSignedOut();
     },
     signIn: async function (email, password) {

@@ -1322,3 +1322,15 @@ html[data-layout] .auth-card .btn { height: 48px; margin-top: 8px; font-size: 16
 html[data-layout] .btn:disabled { opacity: .4; cursor: default; }
 html[data-layout] .btn:disabled:hover { background: transparent; }
 html[data-layout] .btn.solid:disabled:hover { background: var(--accent); }
+
+/* settings: buttons beside a setting never wrap; phone tap targets 44px; nav strip clears the close button */
+html[data-layout] .setting .btn { flex: none; white-space: nowrap; }
+@media (max-width: 860px) {
+  html[data-layout] .setting .btn { height: 44px; padding: 0 16px; }
+  html[data-layout] .modal-nav { padding-right: 56px; }
+  /* long stats pill drops under the text instead of squeezing it */
+  html[data-layout] .setting:has(> .pill) { flex-wrap: wrap; }
+  html[data-layout] .setting > .pill { white-space: normal; }
+  /* the close button sits over the scrolling strip: give it the strip's surface so labels slide under it cleanly */
+  html[data-layout] .modal-close { background: var(--side); width: 44px; height: 44px; }
+}
