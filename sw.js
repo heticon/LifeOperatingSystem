@@ -1,5 +1,5 @@
 // Офлайн-кеш Life OS. Після кожного оновлення програми збільшуй номер версії.
-const VERSION = "lifeos-v12";
+const VERSION = "lifeos-v13";
 const SHELL = [
   "./", "index.html", "styles.css", "themes.js", "app.js", "sync.js", "vendor/supabase.js", "manifest.webmanifest",
   "fonts/inter-latin-wght-normal.woff2", "fonts/inter-latin-ext-wght-normal.woff2", "fonts/inter-cyrillic-wght-normal.woff2",
@@ -9,7 +9,8 @@ const SHELL = [
 
 self.addEventListener("install", (e) => {
   // не активуємось одразу: нова версія чекає, поки користувач натисне «Reload» у банері
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)));
+  // cache: "reload" — беремо файли з мережі, а не зі звичайного кешу браузера (інакше нова версія може змішатися зі старою)
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: "reload" })))));
 });
 
 self.addEventListener("message", (e) => {
@@ -29,11 +30,15 @@ self.addEventListener("fetch", (e) => {
   // погоду завжди беремо з інтернету (кеш погоди тримає сама програма)
   if (url.origin !== location.origin) return;
   // свої файли: спершу мережа (щоб бачити оновлення), без мережі — кеш
+  if (e.request.method !== "GET") return;
+  // no-cache: браузер щоразу перевіряє в сервера, чи файл змінився (GitHub Pages кешує на 10 хв)
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request.url, { cache: "no-cache", credentials: "same-origin", redirect: e.request.mode === "navigate" ? "manual" : "follow" })
       .then((res) => {
-        const copy = res.clone();
-        caches.open(VERSION).then((c) => c.put(e.request, copy));
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(VERSION).then((c) => c.put(e.request, copy));
+        }
         return res;
       })
       .catch(() => caches.match(e.request).then((r) => r || caches.match("index.html")))

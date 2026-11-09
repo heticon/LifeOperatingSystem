@@ -244,6 +244,7 @@
 
   // групи в меню, які можна згорнути
   function collapsible(head, body, key, def) {
+    if (!head || !body) return; // стара розмітка з кешу — не падаємо
     var saved = ls(key), collapsed = saved == null ? def : saved === true;
     function apply() { head.setAttribute("aria-expanded", String(!collapsed)); body.hidden = collapsed; }
     apply();
