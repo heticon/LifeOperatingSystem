@@ -42,7 +42,7 @@ Personal "Life OS" of Bohdan (18, Ukrainian student in Hamburg, Germany). A smal
 ## Roadmap (in order, one step at a time)
 
 1. ✅ GitHub repo + GitHub Pages hosting (site updates 1–2 min after each push to `main`).
-2. "New version available · Reload" banner when the service worker updates.
+2. ✅ "New version available · Reload" banner when the service worker updates.
 3. Sync across devices with **Supabase** (EU/Frankfurt region, email magic-link login, row-level security so only Bohdan can read his rows). Only the Project URL + **anon/publishable key** go in the code — **never the service_role/secret key**. Swap `Store` to sync, keep localStorage as offline cache.
 4. Life OS connector (MCP) so Claude can read and write his tasks/homework.
 5. Google Calendar in Life OS — must read **all** his calendars, including the secondary **"PLANNING"** calendar.

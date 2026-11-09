@@ -138,6 +138,12 @@
     <button type="button" id="tabSettings"><svg class="ic"><use href="#i-settings"/></svg><span>Settings</span></button>
   </nav>
 
+  <div class="update-bar" id="updateBar" role="status" aria-live="polite" hidden>
+    <span>New version available</span>
+    <button class="btn solid" id="updateReload" type="button">Reload</button>
+    <button class="ibtn" id="updateDismiss" type="button" title="Later" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button>
+  </div>
+
   <div class="modal-wrap" id="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
     <div class="modal">
       <nav class="modal-nav" aria-label="Settings sections">

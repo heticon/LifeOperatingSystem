@@ -1277,3 +1277,23 @@ html[data-layout] .page.home { max-width: 960px; }
   html[data-layout] .home-side .clock-row { display: block; }
   html[data-layout] .home-side .clock-meta { margin-top: 16px; padding: 0; border-left: 0; }
 }
+
+/* ---------- update banner (new service worker waiting) ---------- */
+.update-bar[hidden] { display: none !important; }
+html[data-layout] .update-bar {
+  position: fixed; z-index: 40; left: 50%; transform: translateX(-50%);
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 12px;
+  max-width: calc(100vw - 32px); padding: 8px 8px 8px 16px;
+  background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .14);
+  font-size: 14px; font-weight: 500; white-space: nowrap;
+}
+html[data-layout] .update-bar span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 860px) {
+  html[data-layout] .update-bar { left: 16px; right: 16px; transform: none; max-width: none; }
+  html[data-layout] .update-bar .btn { height: 44px; padding: 0 16px; }
+  html[data-layout] .update-bar .ibtn { width: 44px; height: 44px; }
+  /* Simple layout: sit above the tab bar */
+  html[data-layout="apple"] .update-bar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+}

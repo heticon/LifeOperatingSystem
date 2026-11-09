@@ -1662,7 +1662,35 @@
   });
 
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").then(watchUpdates).catch(function () {});
+    });
+  }
+
+  /* Банер «New version available · Reload»: нова версія sw.js чекає, поки користувач погодиться */
+  function watchUpdates(reg) {
+    var bar = document.getElementById("updateBar");
+    var reloading = false;
+    function offer(worker) {
+      if (!worker || !navigator.serviceWorker.controller) return; // перше встановлення — не оновлення
+      bar.hidden = false;
+      document.getElementById("updateReload").onclick = function () { worker.postMessage("SKIP_WAITING"); };
+    }
+    document.getElementById("updateDismiss").onclick = function () { bar.hidden = true; };
+    offer(reg.waiting);
+    reg.addEventListener("updatefound", function () {
+      var w = reg.installing;
+      if (w) w.addEventListener("statechange", function () { if (w.state === "installed") offer(w); });
+    });
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloading) return;
+      reloading = true;
+      location.reload();
+    });
+    // застосунок на телефоні може бути відкритим днями — перевіряємо оновлення при поверненні
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") reg.update().catch(function () {});
+    });
   }
 
   window.__lifeos = { isoWeek: isoWeek, weeksInYear: weeksInYear, Store: Store };

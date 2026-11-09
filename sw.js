@@ -1,5 +1,5 @@
 // Офлайн-кеш Life OS. Після кожного оновлення програми збільшуй номер версії.
-const VERSION = "lifeos-v7";
+const VERSION = "lifeos-v8";
 const SHELL = [
   "./", "index.html", "styles.css", "themes.js", "app.js", "manifest.webmanifest",
   "fonts/inter-latin-wght-normal.woff2", "fonts/inter-latin-ext-wght-normal.woff2", "fonts/inter-cyrillic-wght-normal.woff2",
@@ -8,7 +8,12 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // не активуємось одразу: нова версія чекає, поки користувач натисне «Reload» у банері
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)));
+});
+
+self.addEventListener("message", (e) => {
+  if (e.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (e) => {
