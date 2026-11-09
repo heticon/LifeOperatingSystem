@@ -69,16 +69,62 @@
   /* =========================================================
      Дані
      ========================================================= */
+  // Store — єдине місце, через яке проходять дані. localStorage = офлайн-кеш;
+  // кожне save() повідомляє sync.js, а той відправляє зміни в акаунт (Supabase).
   var Store = {
     KEY: "lifeos.data",
-    data: { version: 1, tasks: [], projects: [], school: null, focusLog: [] },
+    data: { version: 1, tasks: [], projects: [], school: null, focusLog: [], other: {} },
     load: function () {
       var d = ls(this.KEY);
       if (d && Array.isArray(d.tasks)) {
-        this.data = { version: 1, tasks: d.tasks, projects: d.projects || [], school: d.school || null, focusLog: d.focusLog || [] };
+        this.data = { version: 1, tasks: d.tasks, projects: d.projects || [], school: d.school || null,
+          focusLog: d.focusLog || [], other: d.other || {} };
       }
     },
-    save: function () { ls(this.KEY, this.data); }
+    save: function () { ls(this.KEY, this.data); if (window.LifeSync) window.LifeSync.changed(); },
+    // дані → окремі записи {id: {k: kind, d: data}} (по одному рядку в таблиці items)
+    records: function () {
+      var d = this.data, r = {};
+      d.tasks.forEach(function (x) { r[x.id] = { k: "task", d: x }; });
+      d.projects.forEach(function (x) { r[x.id] = { k: "project", d: x }; });
+      if (d.school) {
+        // pos — порядок предметів у меню (у предметів немає createdAt), щоб новий пристрій показав їх так само
+        (d.school.subjects || []).forEach(function (x, i) { if (x.pos !== i) x.pos = i; r[x.id] = { k: "subject", d: x }; });
+        (d.school.homework || []).forEach(function (x) { r[x.id] = { k: "homework", d: x }; });
+        (d.school.notes || []).forEach(function (x) { r[x.id] = { k: "note", d: x }; });
+        if (d.school.timetable) r.timetable = { k: "timetable", d: { days: d.school.timetable } };
+      }
+      d.focusLog.forEach(function (x) { r["f" + x.at] = { k: "focus", d: x }; });
+      // записи, яких ця версія застосунку ще не знає (напр. події календаря) — зберігаємо як є
+      Object.keys(d.other || {}).forEach(function (id) { if (!r[id]) r[id] = d.other[id]; });
+      return r;
+    },
+    // записи → дані; порядок списків зберігаємо як був, нові записи — в кінець
+    fromRecords: function (map, prev) {
+      function list(prevList, kind, key) {
+        var out = [], seen = {};
+        (prevList || []).forEach(function (x) { var e = map[x.id]; if (e && e.k === kind) { out.push(e.d); seen[x.id] = 1; } });
+        var extra = Object.keys(map).filter(function (id) { return map[id].k === kind && !seen[id]; })
+          .map(function (id) { return map[id].d; });
+        extra.sort(function (a, b) { return (a[key] || 0) - (b[key] || 0); });
+        return out.concat(extra);
+      }
+      var ps = prev.school || {}, known = { task: 1, project: 1, subject: 1, homework: 1, note: 1, timetable: 1, focus: 1 };
+      var d = { version: 1, tasks: list(prev.tasks, "task", "createdAt"), projects: list(prev.projects, "project", "createdAt"),
+        school: null, focusLog: [], other: {} };
+      var subs = list(ps.subjects, "subject", "pos"), tt = map.timetable && map.timetable.k === "timetable" ? map.timetable.d.days : null;
+      if (subs.length || tt) {
+        d.school = { subjects: subs, timetable: tt || [0, 1, 2, 3, 4].map(function () { return { start: "08:00", end: "13:00", items: [] }; }),
+          homework: list(ps.homework, "homework", "createdAt"), notes: list(ps.notes, "note", "createdAt") };
+      }
+      Object.keys(map).forEach(function (id) {
+        var e = map[id];
+        if (e.k === "focus") d.focusLog.push(e.d);
+        else if (!known[e.k]) d.other[id] = e;
+      });
+      d.focusLog.sort(function (a, b) { return a.at - b.at; });
+      return d;
+    }
   };
   Store.load();
 
@@ -1563,6 +1609,7 @@
     var hn = hwList().length, nn = notesList().length;
     $("dataStat").textContent = n + " " + plural(n, "task", "tasks") + " · " + m + " " + plural(m, "project", "projects") +
       " · " + hn + " homework · " + nn + " " + plural(nn, "note", "notes");
+    renderAccount();
     showPane("look");
     $("settings").hidden = false;
     var sel = document.querySelector('.theme-card[aria-checked="true"]'); if (sel) sel.focus();
@@ -1579,6 +1626,7 @@
      Клавіатура
      ========================================================= */
   document.addEventListener("keydown", function (e) {
+    if (!$("auth").hidden) return; // екран входу: без гарячих клавіш
     var typing = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "");
     if ((e.ctrlKey || e.metaKey) && e.key === ",") { e.preventDefault(); $("settings").hidden ? openSettings() : closeSettings(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); setSidebar(!sidebarIsOpen()); return; }
@@ -1659,6 +1707,90 @@
   setInterval(function () { loadWeather(); }, WX_AGE);
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "visible") { renderAll(); loadWeather(); }
+  });
+
+  /* =========================================================
+     Акаунт і синхронізація (sync.js)
+     ========================================================= */
+  var pendingRender = false;
+  function renderWhenIdle() {
+    var a = document.activeElement;
+    if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && !a.closest("#auth")) {
+      if (!pendingRender) {
+        pendingRender = true;
+        a.addEventListener("blur", function () { pendingRender = false; renderAll(); }, { once: true });
+      }
+      return;
+    }
+    renderAll();
+  }
+  function syncLine(st) {
+    var n = st.pending, waiting = n ? " · " + n + " " + plural(n, "change", "changes") + " waiting" : "";
+    if (st.state === "syncing") return "Syncing…";
+    if (st.state === "offline") return "Offline" + waiting + ". Syncs when you’re back online.";
+    if (st.state === "error") return "Sync failed" + waiting + (st.error ? " · " + st.error : "");
+    if (st.at) return "Synced at " + shortWhen(st.at) + waiting;
+    return "Not synced yet" + waiting;
+  }
+  function renderAccount() {
+    if (!window.LifeSync) return;
+    var st = window.LifeSync.status();
+    $("accEmail").textContent = st.email || "Not signed in";
+    $("accStatus").textContent = st.email ? syncLine(st) : "Sync is off.";
+    $("syncNow").disabled = !st.email || st.state === "syncing";
+  }
+  function showAuth(on) {
+    $("auth").hidden = !on;
+    document.body.classList.toggle("auth-on", on);
+    if (on) setTimeout(function () { $("authEmail").focus(); }, 50);
+  }
+  if (window.LifeSync) {
+    if (!window.LifeSync.hasSession()) showAuth(true);
+    window.LifeSync.init({
+      records: function () { return Store.records(); },
+      apply: function (changes, full) {
+        var map = full ? {} : Store.records();
+        changes.forEach(function (c) { if (c.deleted) delete map[c.id]; else map[c.id] = { k: c.k, d: c.d }; });
+        Store.data = Store.fromRecords(map, full ? { tasks: [], projects: [], school: null } : Store.data);
+        ls(Store.KEY, Store.data);
+        if (!Store.data.school) ensureSchool();
+        renderWhenIdle();
+      },
+      backup: function () { ls("lifeos.data.backup", { at: Date.now(), data: Store.data }); },
+      onStatus: renderAccount,
+      onSignedOut: function () { showAuth(true); }
+    });
+  }
+  $("authForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = $("authEmail").value.trim(), pass = $("authPass").value;
+    if (!email || !pass) { $("authErr").textContent = "Enter your email and password."; return; }
+    if (!navigator.onLine) { $("authErr").textContent = "You’re offline. Connect to the internet to sign in."; return; }
+    $("authErr").textContent = ""; $("authBtn").disabled = true; $("authBtn").textContent = "Signing in…";
+    window.LifeSync.signIn(email, pass).then(function () {
+      $("authPass").value = ""; showAuth(false); renderAll(); renderAccount();
+    }, function (err) {
+      var m = (err && err.message) || "";
+      $("authErr").textContent = /invalid/i.test(m) ? "Wrong email or password." : (m || "Couldn’t sign in. Try again.");
+    }).then(function () { $("authBtn").disabled = false; $("authBtn").textContent = "Sign in"; });
+  });
+  $("syncNow").addEventListener("click", function () { window.LifeSync.syncNow(); });
+  $("signOut").addEventListener("click", function () {
+    var n = window.LifeSync.status().pending;
+    var msg = n ? n + " " + plural(n, "change hasn’t", "changes haven’t") + " synced yet and will be lost. Sign out anyway?"
+      : "Sign out? Your data will be removed from this device. It stays in your account.";
+    if (!confirm(msg)) return;
+    window.LifeSync.signOut().then(function () {
+      ["lifeos.data", "lifeos.lastRoute", "lifeos.timer"].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+      location.reload();
+    });
+  });
+  $("exportData").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(Store.data, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "lifeos-" + todayISO() + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
   });
 
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

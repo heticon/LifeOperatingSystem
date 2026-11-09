@@ -1297,3 +1297,28 @@ html[data-layout] .update-bar span { flex: 1; overflow: hidden; text-overflow: e
   /* Simple layout: sit above the tab bar */
   html[data-layout="apple"] .update-bar { bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ---------- sign-in screen ---------- */
+.auth[hidden] { display: none !important; }
+body.auth-on { overflow: hidden; }
+html[data-layout] .auth {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 16px max(24px, env(safe-area-inset-bottom, 0px));
+  background: var(--bg); overflow-y: auto;
+}
+html[data-layout] .auth-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; }
+html[data-layout] .auth-card h1 { font-family: var(--font-display); font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.1; }
+html[data-layout] .auth-sub { margin-top: 8px; margin-bottom: 32px; font-size: 15px; color: var(--muted); }
+html[data-layout] .auth-field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+html[data-layout] .auth-field span { font-size: 14px; font-weight: 600; color: var(--fg); }
+html[data-layout] .auth-field input {
+  height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--card); color: var(--fg); font: inherit; font-size: 16px;
+}
+html[data-layout] .auth-field input:focus { outline: none; border-color: var(--fg); }
+html[data-layout] .auth-field input:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+html[data-layout] .auth-err { min-height: 24px; font-size: 14px; color: var(--danger); }
+html[data-layout] .auth-card .btn { height: 48px; margin-top: 8px; font-size: 16px; }
+html[data-layout] .btn:disabled { opacity: .4; cursor: default; }
+html[data-layout] .btn:disabled:hover { background: transparent; }
+html[data-layout] .btn.solid:disabled:hover { background: var(--accent); }
