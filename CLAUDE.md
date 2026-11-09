@@ -43,7 +43,11 @@ Personal "Life OS" of Bohdan (18, Ukrainian student in Hamburg, Germany). A smal
 
 1. ✅ GitHub repo + GitHub Pages hosting (site updates 1–2 min after each push to `main`).
 2. ✅ "New version available · Reload" banner when the service worker updates.
-3. Sync across devices with **Supabase** (Europe — London eu-west-2, project ref `ulezusdpxglednvswkyk`; **email + password** login — magic links don't open inside an iPhone home-screen PWA; signups disabled; row-level security). Schema: `supabase/schema.sql` (one `items` row per record, `kind` + `data` jsonb, client `updated_at`, soft `deleted`; last write wins). Only the Project URL + **publishable/anon key** go in the code — **never the service_role/secret key**. Swap `Store` to sync, keep localStorage as offline cache + outbox.
-4. Google Calendar in Life OS — read **all** his calendars, including the secondary **"PLANNING"** calendar (Supabase Edge Functions hold the OAuth refresh token; OAuth app in Production, not Testing).
+3. ✅ Sync across devices with **Supabase** (Europe — London eu-west-2, project ref `ulezusdpxglednvswkyk`; **email + password** login — magic links don't open inside an iPhone home-screen PWA; signups disabled; row-level security). Schema: `supabase/schema.sql` (one `items` row per record, `kind` + `data` jsonb, client `updated_at`, soft `deleted`; last write wins). Only the Project URL + **publishable/anon key** go in the code — **never the service_role/secret key**. Swap `Store` to sync, keep localStorage as offline cache + outbox.
+4. ✅ Google Calendar (read-only). Google Cloud project `life-os-514218`, OAuth Web client (redirects: live site + `http://localhost:8765/`), app **In production** (unverified, owner clicks Advanced → Go to Life OS). Calendar API must be enabled.
+   - `public.connections` holds the refresh token: RLS on, **no policies**, so browsers can't read it.
+   - Edge Functions (`supabase/functions`, deploy: `npx supabase functions deploy google-connect google-sync --remote=ulezusdpxglednvswkyk --use-api`): `google-connect` (exchange / disconnect), `google-sync` (user JWT = sync now; no JWT = cron, skips users synced < 10 min ago). Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (only Bohdan sets the secret).
+   - Writes into `items`: `gconn` (status), `gcal:<id>` (calendar, `on` = shown), `gev:<cal>:<id>` (events ±4 weeks). Client reads them from `Store.data.other`.
+   - pg_cron job `google-sync` every 15 min (`supabase/cron.sql`). `privacy.html` is the consent-screen privacy link. `.nojekyll` is required (Pages Jekyll build failed).
 5. Life OS connector (MCP) on a Cloudflare Worker with OAuth, so Claude can read and write his tasks/homework/events.
 6. Google Drive.
