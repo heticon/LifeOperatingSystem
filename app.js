@@ -1472,7 +1472,7 @@
      Google Calendar (лише читання). Події кладе в items серверна функція google-sync;
      тут вони лежать у Store.data.other: gconn (стан), gcal:* (календарі), gev:* (події).
      ========================================================= */
-  var GOOGLE_CLIENT_ID = "";
+  var GOOGLE_CLIENT_ID = "403726151772-ghcjpt0a314cm0pfovvbirni4u3iop6v.apps.googleusercontent.com";
   var GOOGLE_SCOPE = "openid email https://www.googleapis.com/auth/calendar.readonly";
   var gui = { busy: "", error: "" };
 
