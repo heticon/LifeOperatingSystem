@@ -76,6 +76,14 @@
         <a class="nav-item" href="#home" data-route="home"><svg class="ic"><use href="#i-house"/></svg><span>Home</span></a>
         <a class="nav-item" href="#focus" data-route="focus"><svg class="ic"><use href="#i-timer"/></svg><span>Focus</span><span class="count" id="cntFocus"></span></a>
 
+        <div class="nav-group" id="grpCal">
+          <button class="group-head" type="button" aria-expanded="true" aria-controls="grpCalBody">
+            <svg class="ic caret"><use href="#i-chevron-down"/></svg><span>Calendar</span>
+          </button>
+          <div class="group-body" id="grpCalBody">
+            <a class="nav-item" href="#calendar" data-route="calendar"><svg class="ic"><use href="#i-calendar"/></svg><span>Schedule</span></a>
+          </div>
+        </div>
         <div class="nav-group" id="grpTasks">
           <button class="group-head" type="button" aria-expanded="true" aria-controls="grpTasksBody">
             <svg class="ic caret"><use href="#i-chevron-down"/></svg><span>Tasks</span>
@@ -133,6 +141,7 @@
 
   <nav class="tabbar" id="tabbar" aria-label="Sections">
     <a href="#home" data-tab="home"><svg class="ic"><use href="#i-house"/></svg><span>Home</span></a>
+    <a href="#calendar" data-tab="calendar"><svg class="ic"><use href="#i-calendar"/></svg><span>Calendar</span></a>
     <a href="#tasks" data-tab="tasks"><svg class="ic"><use href="#i-list-checks"/></svg><span>Tasks</span></a>
     <a href="#focus" data-tab="focus"><svg class="ic"><use href="#i-timer"/></svg><span>Focus</span></a>
     <a href="#school" data-tab="school"><svg class="ic"><use href="#i-graduation-cap"/></svg><span>School</span></a>
@@ -224,7 +233,7 @@
           <div class="setting">
             <div class="setting-info">
               <div class="setting-name">Life OS</div>
-              <div class="setting-desc">Version 0.9 · Google Calendar · Sync across devices · Home, Focus, Tasks, School</div>
+              <div class="setting-desc">Version 0.10 · Calendar · Sync across devices · Home, Focus, Tasks, School</div>
             </div>
           </div>
           <div class="setting">

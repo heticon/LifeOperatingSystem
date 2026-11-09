@@ -1362,3 +1362,16 @@ html[data-layout] .cal-row > span:last-child { min-width: 0; overflow-wrap: anyw
   html[data-layout] .setting:has(> .setting-btns) { flex-wrap: wrap; }
   html[data-layout] .cal-row { min-height: 48px; }
 }
+
+/* ---------- Calendar → Schedule ---------- */
+html[data-layout] .page.cal .done-toggle { margin-top: 8px; }
+html[data-layout] .page.cal .cal-week { margin-top: 32px; }
+html[data-layout] .page.cal .cal-week + .group { margin-top: 16px; }
+html[data-layout] .task.ev.gone .task-title,
+html[data-layout] .task.ev.gone .ev-time { color: var(--muted); }
+html[data-layout] .task.ev.now .ev-time { color: var(--accent-2); font-weight: 600; }
+html[data-layout] .task.ev.now { box-shadow: inset 2px 0 0 var(--accent-2); }
+html[data-layout] .page.cal .btn.solid { margin-top: 8px; }
+.ic.spin { animation: lifeos-spin 1s linear infinite; }
+@keyframes lifeos-spin { to { transform: rotate(-360deg); } }
+@media (prefers-reduced-motion: reduce) { .ic.spin { animation: none; } }

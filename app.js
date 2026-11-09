@@ -178,7 +178,7 @@
 
   function parseHash() {
     var h = (location.hash || "").replace(/^#/, "");
-    if (h === "todos" || h === "week" || h === "home" || h === "tasks" || h === "school" || h === "focus") return { name: h, id: null };
+    if (h === "todos" || h === "week" || h === "home" || h === "tasks" || h === "school" || h === "focus" || h === "calendar") return { name: h, id: null };
     if (h.indexOf("project-") === 0) return { name: "project", id: h.slice(8) };
     if (h === "timetable" || h === "homework") return { name: h, id: null };
     if (h.indexOf("subject-") === 0) return { name: "subject", id: h.slice(8) };
@@ -251,6 +251,7 @@
   }
   collapsible(document.querySelector("#grpTasks .group-head"), $("grpTasksBody"), "lifeos.tasksCollapsed", false);
   collapsible(document.querySelector("#grpSchool .group-head"), $("grpSchoolBody"), "lifeos.schoolCollapsed", false);
+  collapsible(document.querySelector("#grpCal .group-head"), $("grpCalBody"), "lifeos.calCollapsed", false);
   collapsible($("subjToggle"), $("subjectList"), "lifeos.subjectsCollapsed", false);
 
   // новий проєкт
@@ -276,6 +277,7 @@
     if (r.name === "home") c.innerHTML = '<span class="cur">Home</span>';
     else if (r.name === "tasks") c.innerHTML = '<span class="cur">Tasks</span>';
     else if (r.name === "focus") c.innerHTML = '<span class="cur">Focus</span>';
+    else if (r.name === "calendar") c.innerHTML = '<span>Calendar</span>' + sep + '<span class="cur">Schedule</span>';
     else if (["school", "timetable", "homework", "subject", "note"].indexOf(r.name) >= 0) c.innerHTML = schoolCrumbs(sep);
     else {
       var cur = r.name === "todos" ? "To-dos" : r.name === "week" ? "This week" : esc((projectById(r.id) || {}).name || "Project");
@@ -1526,8 +1528,73 @@
       var more = list.length - 1;
       if (more) txt += " · " + more + " more today";
     }
-    return '<div class="hp"><span class="hk">' + icon("calendar") + 'Calendar</span><span class="hv"><a href="#week">' + txt + "</a></span></div>";
+    return '<div class="hp"><span class="hk">' + icon("calendar") + 'Calendar</span><span class="hv"><a href="#calendar">' + txt + "</a></span></div>";
   }
+
+
+  /* ---------- Calendar → Schedule (список днів із подіями) ---------- */
+  var CAL_DAYS = 28; // стільки днів уперед і назад тримає google-sync
+  var cui = { past: false, busy: false, error: "" };
+  // усі записи дня для розкладу; сюди ж пізніше додамо власні зустрічі й дати без часу
+  function agendaFor(d) { return eventsOn(d); }
+  function dayLabel(d) {
+    var n = Math.round((startOfDay(d) - startOfDay(new Date())) / 864e5);
+    return n === 0 ? "Today" : n === 1 ? "Tomorrow" : n === -1 ? "Yesterday" : DAYS[(d.getDay() + 6) % 7];
+  }
+  function agendaRow(e, d) {
+    var now = new Date(), sp = evSpan(e), cls = "";
+    if (!e.allDay && sp[1] <= now) cls = " gone";
+    else if (!e.allDay && sp[0] <= now && sp[1] > now) cls = " now";
+    return evRow(e, d).replace('class="task ev"', 'class="task ev' + cls + '"');
+  }
+  function renderCalendar() {
+    var c = gconn(), today = startOfDay(new Date());
+    $("headActions").innerHTML = c ? '<button type="button" class="ibtn" data-cal-refresh title="Refresh from Google" aria-label="Refresh from Google"' +
+      (cui.busy ? " disabled" : "") + ">" + icon("rotate-ccw", cui.busy ? "spin" : "") + "</button>" : "";
+    var head = '<div class="page-head"><div><h1>Schedule</h1><div class="page-sub" id="calSub"></div></div></div>';
+    if (!c) {
+      $("view").innerHTML = '<div class="page cal">' + head +
+        '<div class="empty">Connect Google Calendar to see your schedule here.</div>' +
+        '<button type="button" class="btn solid" data-cal-connect>Connect Google Calendar</button></div>';
+      $("calSub").textContent = "Not connected";
+      return;
+    }
+    var from = cui.past ? addDays(today, -CAL_DAYS) : today, to = addDays(today, CAL_DAYS);
+    var html = "", count = 0, lastWeek = "";
+    for (var d = from; d < to; d = addDays(d, 1)) {
+      var list = agendaFor(d), isToday = +d === +today;
+      if (!list.length && !isToday) continue;
+      var wk = weekKey(d);
+      if (wk !== lastWeek) {
+        lastWeek = wk;
+        var mon = mondayOf(d);
+        html += '<div class="section-h cal-week">Week ' + isoWeek(d).week + ' <span class="gd">' + weekRange(mon) + "</span></div>";
+      }
+      count += list.length;
+      html += '<section class="group' + (d < today ? " past" : "") + '">' +
+        '<div class="group-title"><span class="gt">' + dayLabel(d) + '</span><span class="gd">' +
+        (dayLabel(d) === DAYS[(d.getDay() + 6) % 7] ? fmtDayMonth.format(d) : DAYS[(d.getDay() + 6) % 7] + ", " + fmtDayMonth.format(d)) + "</span>" +
+        "</div>" +
+        '<div class="list">' + (list.length ? list.map(function (e) { return agendaRow(e, d); }).join("") : '<div class="empty">Nothing scheduled</div>') + "</div></section>";
+    }
+    var earlier = '<button type="button" class="done-toggle" data-cal-past aria-expanded="' + cui.past + '">' +
+      icon(cui.past ? "chevron-down" : "chevron-right") + (cui.past ? "Hide earlier" : "Show earlier") + "</button>";
+    $("view").innerHTML = '<div class="page cal">' + head + earlier + html + "</div>";
+    $("calSub").innerHTML = (cui.error ? '<span class="late">' + esc(cui.error) + "</span>"
+      : c.error ? '<span class="late">' + esc(c.error) + "</span>"
+      : (cui.past ? "Last and next 4 weeks · " : "Next 4 weeks · ") + count + " " + plural(count, "event", "events") + " · synced " + shortWhen(Date.parse(c.at)));
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-cal-past]")) { cui.past = !cui.past; renderMain(); return; }
+    if (e.target.closest("[data-cal-connect]")) { openSettings("calendar"); return; }
+    if (e.target.closest("[data-cal-refresh]") && !cui.busy) {
+      cui.busy = true; cui.error = ""; renderMain();
+      window.LifeSync.call("google-sync").then(function (res) {
+        if (res && res.ok === false && res.error) throw new Error(res.error);
+      }).catch(function (err) { cui.error = (err && err.message) || "Couldn’t refresh."; })
+        .then(function () { cui.busy = false; window.LifeSync.syncNow(); renderMain(); });
+    }
+  });
 
   /* ---------- Settings → Calendar ---------- */
   function redirectUri() { return location.origin + location.pathname; }
@@ -1672,7 +1739,7 @@
     var r = ui.route, b = backFor(r), el = $("backBtn");
     if (b) { el.hidden = false; el.setAttribute("href", b[0]); $("backLabel").textContent = b[1]; el.classList.toggle("always", r.name === "note"); }
     else el.hidden = true;
-    var tab = r.name === "home" ? "home" : r.name === "focus" ? "focus" : ["tasks", "todos", "week", "project"].indexOf(r.name) >= 0 ? "tasks" : "school";
+    var tab = r.name === "home" ? "home" : r.name === "focus" ? "focus" : r.name === "calendar" ? "calendar" : ["tasks", "todos", "week", "project"].indexOf(r.name) >= 0 ? "tasks" : "school";
     document.querySelectorAll("#tabbar [data-tab]").forEach(function (a) { a.classList.toggle("on", a.getAttribute("data-tab") === tab); });
   }
   $("tabSettings").addEventListener("click", function () { openSettings(); });
@@ -1804,6 +1871,7 @@
     else if (r.name === "school") renderSchoolHub();
     else if (r.name === "todos") renderTodos();
     else if (r.name === "week") renderWeek();
+    else if (r.name === "calendar") renderCalendar();
     else if (r.name === "project") renderProject();
     else if (r.name === "timetable") renderTimetable();
     else if (r.name === "homework") renderHomework();
