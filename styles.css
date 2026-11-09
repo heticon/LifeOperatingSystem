@@ -1375,3 +1375,121 @@ html[data-layout] .page.cal .btn.solid { margin-top: 8px; }
 .ic.spin { animation: lifeos-spin 1s linear infinite; }
 @keyframes lifeos-spin { to { transform: rotate(-360deg); } }
 @media (prefers-reduced-motion: reduce) { .ic.spin { animation: none; } }
+
+/* ---------- Calendar: week / day grid ---------- */
+html[data-layout] .page.cal-g { max-width: 1280px; padding-bottom: 32px; }
+html[data-layout] .cal-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+html[data-layout] .cal-head h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+html[data-layout] .cal-ctrl { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+html[data-layout] .cal-nav { display: flex; align-items: center; gap: 4px; }
+html[data-layout] .cal-modes { margin: 0; }
+html[data-layout] .cal-grid button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+html[data-layout] .cg-row,
+html[data-layout] .cg-body { display: grid; grid-template-columns: 56px repeat(var(--days), minmax(0, 1fr)); }
+html[data-layout] .cg-top { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--line); }
+html[data-layout] .cg-dh { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 8px 4px 12px; border-radius: 6px; }
+html[data-layout] .cg-dh:not(:disabled):hover { background: var(--hover); }
+html[data-layout] .cg-dh:disabled { cursor: default; }
+html[data-layout] .cg-wd { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+html[data-layout] .cg-dn { font-family: var(--font-display); font-size: 20px; font-weight: 600; color: var(--fg); min-width: 32px; height: 32px; line-height: 32px; border-radius: 50%; text-align: center; font-variant-numeric: tabular-nums; }
+html[data-layout] .cg-dh.past .cg-dn { color: var(--muted); }
+html[data-layout] .cg-dh.today .cg-wd { color: var(--accent-2); }
+html[data-layout] .cg-dh.today .cg-dn { background: var(--accent-2); color: var(--bg); }
+html[data-layout] .cg-alld { border-top: 1px solid var(--line); }
+html[data-layout] .cg-adl { font-family: var(--mono); font-size: 12px; color: var(--muted); padding: 8px 8px 0 0; text-align: right; }
+html[data-layout] .cg-ad { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px; border-left: 1px solid var(--line); min-width: 0; }
+html[data-layout] .cg-chip {
+  display: block; width: 100%; height: 24px; padding: 0 8px; border-radius: 4px; text-align: left;
+  background: color-mix(in srgb, var(--c) 22%, var(--card)) !important; box-shadow: inset 3px 0 0 var(--c);
+  font-size: 12px !important; font-weight: 600; line-height: 24px; color: var(--fg) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+html[data-layout] .cg-chip:hover { background: color-mix(in srgb, var(--c) 32%, var(--card)) !important; }
+html[data-layout] .cg-chip.gone { opacity: .6; }
+html[data-layout] .cg-body { position: relative; height: calc(var(--hour) * 24); }
+html[data-layout] .cg-hours { position: relative; }
+html[data-layout] .cg-hours span {
+  position: absolute; right: 8px; transform: translateY(-50%);
+  font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+html[data-layout] .cg-col {
+  position: relative; border-left: 1px solid var(--line);
+  background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 100% var(--hour);
+}
+html[data-layout] .cg-col.today { background-color: color-mix(in srgb, var(--accent-2) 5%, transparent); }
+html[data-layout] .cg-ev {
+  position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 0; min-width: 0;
+  padding: 2px 8px 2px 8px; border-radius: 6px; overflow: hidden; text-align: left;
+  background: color-mix(in srgb, var(--c) 20%, var(--card)) !important; box-shadow: inset 3px 0 0 var(--c), 0 0 0 1px var(--bg);
+  color: var(--fg) !important; transition: background-color .12s ease;
+}
+html[data-layout] .cg-ev:hover { background: color-mix(in srgb, var(--c) 30%, var(--card)) !important; z-index: 2; }
+html[data-layout] .cg-ev:not(.tall) { flex-direction: row; align-items: center; gap: 8px; }
+html[data-layout] .cg-ev .cg-t { font-size: 13px; font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+html[data-layout] .cg-ev.tall .cg-t { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+html[data-layout] .cg-ev .cg-tm { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-layout] .cg-ev.gone { opacity: .55; }
+html[data-layout] .cg-ev.live { box-shadow: inset 3px 0 0 var(--c), 0 0 0 1px var(--c); }
+html[data-layout] .cg-ev:focus-visible, html[data-layout] .cg-chip:focus-visible, html[data-layout] .cg-dh:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+html[data-layout] .cg-now { position: absolute; left: 0; right: 0; z-index: 2; height: 2px; background: var(--danger); pointer-events: none; }
+html[data-layout] .cg-now::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); }
+
+/* phone: day strip */
+html[data-layout] .cal-strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: 16px; }
+html[data-layout] .cs-day {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 64px; padding: 8px 0;
+  border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; cursor: pointer;
+}
+html[data-layout] .cs-day .cg-dn { font-size: 16px; height: 24px; line-height: 24px; min-width: 24px; }
+html[data-layout] .cs-day:hover { background: var(--hover); }
+html[data-layout] .cs-day.today .cg-wd, html[data-layout] .cs-day.today .cg-dn { color: var(--accent-2); }
+html[data-layout] .cs-day.on { background: var(--accent); }
+html[data-layout] .cs-day.on .cg-wd, html[data-layout] .cs-day.on .cg-dn { color: var(--on-accent); }
+html[data-layout] .cs-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+html[data-layout] .cs-dot.off { visibility: hidden; }
+html[data-layout] .cs-day.on .cs-dot { background: var(--on-accent); }
+html[data-layout] .cs-day:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+/* event details */
+.cal-pop {
+  position: fixed; z-index: 80; width: 320px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 24px 64px rgba(0, 0, 0, .14);
+}
+.cal-pop.sheet { left: 0; right: 0; bottom: 0; width: auto; border-radius: 10px 10px 0 0; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.cal-pop .cp-head { display: flex; align-items: flex-start; gap: 12px; }
+.cal-pop .cp-head .ibtn { margin: -4px -8px 0 0; }
+.cal-pop .cp-sw { flex: none; width: 12px; height: 12px; margin: 8px 2px 0; border-radius: 4px; background: var(--c); }
+.cal-pop h3 { flex: 1; min-width: 0; margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 600; letter-spacing: -0.015em; line-height: 1.25; overflow-wrap: anywhere; }
+.cal-pop .cp-row { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: var(--fg); line-height: 1.45; }
+.cal-pop .cp-row > .ic { flex: none; width: 16px; height: 16px; margin-top: 2px; color: var(--muted); }
+.cal-pop .cp-row span { min-width: 0; overflow-wrap: anywhere; }
+.cal-pop .btn { align-self: flex-start; height: 32px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px solid var(--line); border-radius: 6px; color: var(--fg); text-decoration: none; font-size: 14px; font-weight: 600; }
+.cal-pop .btn:hover { background: var(--hover); }
+.cal-pop .ibtn { flex: none; }
+
+@media (max-width: 860px) {
+  html[data-layout] .page.cal-g { padding-left: 8px; padding-right: 8px; }
+  html[data-layout] .cal-head { padding: 0 8px; align-items: flex-start; flex-direction: column; gap: 12px; }
+  html[data-layout] .cal-ctrl { width: 100%; justify-content: space-between; }
+  html[data-layout] .cal-nav .btn, html[data-layout] .cal-nav .ibtn { height: 44px; min-width: 44px; }
+  html[data-layout] .cg-row, html[data-layout] .cg-body { grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); }
+  html[data-layout] .cg-dh { flex-direction: column; align-items: center; gap: 0; padding: 4px 0 8px; }
+  html[data-layout] .cal-grid[style*="--days:7"] .cg-dn { font-size: 16px; min-width: 28px; height: 28px; line-height: 28px; }
+  html[data-layout] .cal-grid[style*="--days:7"] .cg-ev { padding: 2px 4px; }
+  html[data-layout] .cal-grid[style*="--days:7"] .cg-ev .cg-tm { display: none; }
+  html[data-layout] .cal-grid[style*="--days:7"] .cg-ev .cg-t { font-size: 12px; }
+  html[data-layout] .cal-grid[style*="--days:7"] .cg-chip { padding: 0 4px; }
+  html[data-layout] .cg-hours span { right: 4px; }
+  html[data-layout] .cg-adl { padding-right: 4px; font-size: 12px; }
+}
+/* the grid scrolls inside the page; title, controls and day headers stay put */
+html[data-layout] .page.cal-g { height: 100%; display: flex; flex-direction: column; padding-bottom: 16px; }
+html[data-layout] .cal-g .cal-grid { flex: 1; min-height: 320px; display: flex; flex-direction: column; border-bottom: 1px solid var(--line); }
+html[data-layout] .cal-g .cg-top { position: static; overflow: hidden; scrollbar-gutter: stable; }
+html[data-layout] .cg-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; overscroll-behavior: contain; padding-top: 8px; }
+html[data-layout="apple"] .page.cal-g { padding-bottom: 16px; }
+@media (max-width: 860px) {
+  html[data-layout="apple"] .page.cal-g { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
+  html[data-layout] .cal-grid[style*="--days:1"] .cg-heads { display: none; }
+}

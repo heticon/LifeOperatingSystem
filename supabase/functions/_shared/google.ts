@@ -3,7 +3,7 @@
 // Calendars and events are written into public.items, so every device gets them through normal sync:
 //   gconn            kind "connection"  {account, at, error}
 //   gcal:<calId>     kind "calendar"    {cal, name, color, primary, on}
-//   gev:<calId>:<id> kind "event"       {cal, title, start, end, allDay, location, link}
+//   gev:<calId>:<id> kind "event"       {cal, title, start, end, allDay, location, link, colorId}
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 export const WINDOW_DAYS = 28;
@@ -99,6 +99,7 @@ export function eventData(cal: string, e: any) {
     allDay,
   };
   if (e.location) d.location = e.location;
+  if (e.colorId) d.colorId = String(e.colorId); // Google's own event colour (Tomato, Sage, …); the app maps it
   if (e.htmlLink) d.link = e.htmlLink;
   return d;
 }

@@ -94,6 +94,12 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 - Lesson cell: `--card`, 1px `--line` border, radius 6px, 40px tall, 8px subject dot, name 14px 500. No tinted fills.
 - Today: header name in `--accent-2` + 2px `--accent-2` underline.
 
+### Calendar (week / day grid)
+- The one place with tinted fills (Bohdan asked for Google-like colour blocks): event block = `color-mix(event colour 20%, --card)` + 3px solid left edge in the event colour; text stays `--fg`, time in mono `--muted`.
+- Event colour: Google event colour (`colorId` → modern Google palette) or the calendar's colour.
+- Hour = 48px, hairline per hour, today column 5% `--accent-2` wash, "now" line 2px `--danger`.
+- Past events 55% opacity; current event gets a 1px outline in its colour. Details open in a popover (desktop) or bottom sheet (phone).
+
 ### Home
 - Left-aligned: weekday + date (20px), clock below, then a definition list (label 14px `--muted`, value 15px `--fg`) separated by hairlines. No icon tiles.
 

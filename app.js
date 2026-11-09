@@ -278,7 +278,7 @@
     if (r.name === "home") c.innerHTML = '<span class="cur">Home</span>';
     else if (r.name === "tasks") c.innerHTML = '<span class="cur">Tasks</span>';
     else if (r.name === "focus") c.innerHTML = '<span class="cur">Focus</span>';
-    else if (r.name === "calendar") c.innerHTML = '<span>Calendar</span>' + sep + '<span class="cur">Schedule</span>';
+    else if (r.name === "calendar") c.innerHTML = '<span class="cur">Calendar</span>';
     else if (["school", "timetable", "homework", "subject", "note"].indexOf(r.name) >= 0) c.innerHTML = schoolCrumbs(sep);
     else {
       var cur = r.name === "todos" ? "To-dos" : r.name === "week" ? "This week" : esc((projectById(r.id) || {}).name || "Project");
@@ -338,7 +338,7 @@
     tickHome(false);
     focusTick();
     if (now.getSeconds() === 0) {
-      renderStatus();
+      renderStatus(); calNowTick();
       if (now.getHours() === 0 && now.getMinutes() === 0) renderAll(); // новий день
     }
     setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
@@ -1533,14 +1533,165 @@
   }
 
 
-  /* ---------- Calendar → Schedule (список днів із подіями) ---------- */
-  var CAL_DAYS = 28; // стільки днів уперед і назад тримає google-sync
-  var cui = { past: false, busy: false, error: "" };
-  // усі записи дня для розкладу; сюди ж пізніше додамо власні зустрічі й дати без часу
-  function agendaFor(d) { return eventsOn(d); }
+  /* =========================================================
+     Calendar — сітка тижня / дня (як у Google Calendar) і список.
+     Записи для календаря збирає agendaEntries(): зараз це події Google,
+     пізніше сюди ж додамо власні зустрічі й дати без часу.
+     ========================================================= */
+  var CAL_DAYS = 28;   // стільки днів уперед і назад тримає google-sync
+  var HOUR = 48;       // висота години в сітці, px
+  // кольори подій Google (colorId 1–11), як у сучасному Google Calendar
+  var GCOLORS = { "1": "#7986cb", "2": "#33b679", "3": "#8e24aa", "4": "#e67c73", "5": "#f6bf26", "6": "#f4511e",
+    "7": "#039be5", "8": "#616161", "9": "#3f51b5", "10": "#0b8043", "11": "#d50000" };
+  var cui = { view: ls("lifeos.calView") || null, date: startOfDay(new Date()), past: false, busy: false, error: "", pop: null, scrollKey: "" };
+
+  function calView() { return cui.view || (isNarrow() ? "day" : "week"); }
+  function evColor(e) { var c = calMap()[e.cal] || {}; return GCOLORS[e.colorId] || c.color || "#888888"; }
+  // [{id, e}] для дня d — події увімкнених календарів
+  function agendaEntries(d) {
+    var o = Store.data.other || {}, cm = calMap(), d0 = startOfDay(d), d1 = addDays(d0, 1), out = [];
+    Object.keys(o).forEach(function (id) {
+      var x = o[id]; if (!x || x.k !== "event") return;
+      var e = x.d, c = cm[e.cal]; if (!c || c.on === false) return;
+      var sp = evSpan(e); if (sp[0] < d1 && sp[1] > d0) out.push({ id: id, e: e });
+    });
+    return out.sort(function (a, b) { return (b.e.allDay - a.e.allDay) || (evSpan(a.e)[0] - evSpan(b.e)[0]) || a.e.title.localeCompare(b.e.title); });
+  }
+  function agendaFor(d) { return agendaEntries(d).map(function (x) { return x.e; }); }
+  // подія займає весь день d (на весь день або тягнеться через цілу добу)
+  function fullDay(e, d) {
+    if (e.allDay) return true;
+    var sp = evSpan(e), d0 = startOfDay(d); return sp[0] <= d0 && sp[1] >= addDays(d0, 1);
+  }
   function dayLabel(d) {
     var n = Math.round((startOfDay(d) - startOfDay(new Date())) / 864e5);
     return n === 0 ? "Today" : n === 1 ? "Tomorrow" : n === -1 ? "Yesterday" : DAYS[(d.getDay() + 6) % 7];
+  }
+  function calRange() {
+    var v = calView();
+    if (v === "week") { var m = mondayOf(cui.date); return { from: m, days: 7 }; }
+    return { from: startOfDay(cui.date), days: 1 };
+  }
+  function calShift(n) {
+    var v = calView();
+    cui.date = v === "week" ? addDays(cui.date, 7 * n) : v === "day" ? addDays(cui.date, n) : cui.date;
+    cui.pop = null; closeCalPop(); renderMain();
+  }
+  var fmtMonthYear = new Intl.DateTimeFormat(LOCALE, { month: "long", year: "numeric" });
+  var fmtMonShort = new Intl.DateTimeFormat(LOCALE, { month: "short" });
+
+  // розкладка подій одного дня по колонках, щоб вони не накладались
+  function layoutDay(items) {
+    items.sort(function (a, b) { return (a.s - b.s) || (b.e - a.e); });
+    var groups = [], cur = [], end = -1;
+    items.forEach(function (it) {
+      if (cur.length && it.s >= end) { groups.push(cur); cur = []; end = -1; }
+      cur.push(it); end = Math.max(end, it.e);
+    });
+    if (cur.length) groups.push(cur);
+    groups.forEach(function (g) {
+      var cols = [];
+      g.forEach(function (it) {
+        for (var c = 0; c < cols.length; c++) if (cols[c] <= it.s) break;
+        cols[c] = it.e; it.col = c;
+      });
+      g.forEach(function (it) { it.cols = cols.length; });
+    });
+    return items;
+  }
+
+  function calHeadHTML() {
+    var v = calView(), r = calRange(), last = addDays(r.from, r.days - 1);
+    var title = v === "list" ? "Schedule" : fmtMonthYear.format(r.from);
+    if (v !== "list" && last.getMonth() !== r.from.getMonth()) title = fmtMonShort.format(r.from) + " – " + fmtMonShort.format(last) + " " + last.getFullYear();
+    var sub = v === "week" ? "Week " + isoWeek(r.from).week + " · " + weekRange(r.from)
+      : v === "day" ? cap(fmtWeekday.format(r.from)) + ", " + fmtDayMonth.format(r.from) : "";
+    var c = gconn();
+    if (c && c.error) sub += (sub ? " · " : "") + '<span class="late">' + esc(c.error) + "</span>";
+    if (cui.error) sub += (sub ? " · " : "") + '<span class="late">' + esc(cui.error) + "</span>";
+    var modes = [["day", "Day"], ["week", "Week"], ["list", "List"]].map(function (m) {
+      return '<button type="button" role="tab" data-cal-view="' + m[0] + '" aria-selected="' + (v === m[0]) + '">' + m[1] + "</button>";
+    }).join("");
+    var nav = v === "list" ? "" :
+      '<button type="button" class="btn" data-cal-today>Today</button>' +
+      '<button type="button" class="ibtn" data-cal-nav="-1" aria-label="Previous">' + icon("chevron-left") + "</button>" +
+      '<button type="button" class="ibtn" data-cal-nav="1" aria-label="Next">' + icon("chevron-right") + "</button>";
+    return '<div class="cal-head"><div class="cal-titles"><h1>' + title + '</h1><div class="page-sub" id="calSub">' + sub + "</div></div>" +
+      '<div class="cal-ctrl"><div class="modes cal-modes" role="tablist" aria-label="Calendar view">' + modes + "</div>" +
+      '<div class="cal-nav">' + nav + "</div></div></div>";
+  }
+
+  function chip(x, d) {
+    var col = evColor(x.e), gone = evSpan(x.e)[1] <= new Date();
+    return '<button type="button" class="cg-chip' + (gone ? " gone" : "") + '" style="--c:' + esc(col) + '" data-ev="' + esc(x.id) + '" data-day="' + isoDate(d) + '">' +
+      '<span class="cg-t">' + esc(x.e.title) + "</span></button>";
+  }
+
+  function renderCalGrid() {
+    var r = calRange(), today = startOfDay(new Date()), now = new Date(), days = [];
+    for (var i = 0; i < r.days; i++) days.push(addDays(r.from, i));
+    var head = "", allday = "", cols = "", anyAll = false;
+    days.forEach(function (d) {
+      var ents = agendaEntries(d), isT = +d === +today, past = d < today;
+      var all = ents.filter(function (x) { return fullDay(x.e, d); });
+      var timed = ents.filter(function (x) { return !fullDay(x.e, d); });
+      if (all.length) anyAll = true;
+      head += '<button type="button" class="cg-dh' + (isT ? " today" : "") + (past ? " past" : "") + '" data-cal-day="' + isoDate(d) + '"' +
+        (r.days === 1 ? " disabled" : "") + '><span class="cg-wd">' + DAYS_S[(d.getDay() + 6) % 7] + '</span><span class="cg-dn">' + d.getDate() + "</span></button>";
+      allday += '<div class="cg-ad">' + all.map(function (x) { return chip(x, d); }).join("") + "</div>";
+      var d0 = +d, items = timed.map(function (x) {
+        var sp = evSpan(x.e), s = Math.max(0, (sp[0] - d0) / 60000), e = Math.min(1440, (sp[1] - d0) / 60000);
+        return { x: x, s: s, e: Math.max(e, s + 15) };
+      });
+      var blocks = layoutDay(items).map(function (it) {
+        var top = it.s / 60 * HOUR, h = Math.max((it.e - it.s) / 60 * HOUR - 2, 18), sp = evSpan(it.x.e);
+        var gone = sp[1] <= now, live = sp[0] <= now && sp[1] > now;
+        var time = evTime(it.x.e, d), tall = h >= 40;
+        return '<button type="button" class="cg-ev' + (gone ? " gone" : "") + (live ? " live" : "") + (tall ? " tall" : "") + '" data-ev="' + esc(it.x.id) + '" data-day="' + isoDate(d) + '"' +
+          ' style="--c:' + esc(evColor(it.x.e)) + ";top:" + top + "px;height:" + h + "px;left:calc(" + (it.col / it.cols * 100) + "% + 2px);width:calc(" + (100 / it.cols) + '% - 4px)"' +
+          ' aria-label="' + esc(it.x.e.title + ", " + time) + '">' +
+          '<span class="cg-t">' + esc(it.x.e.title) + '</span><span class="cg-tm">' + time + "</span></button>";
+      }).join("");
+      var line = isT ? '<div class="cg-now" id="cgNow" style="top:' + ((now - d0) / 60000 / 60 * HOUR) + 'px"></div>' : "";
+      cols += '<div class="cg-col' + (isT ? " today" : "") + (past ? " past" : "") + '">' + blocks + line + "</div>";
+    });
+    var hours = "";
+    for (var hh = 1; hh < 24; hh++) hours += '<span style="top:' + hh * HOUR + 'px">' + pad(hh) + ":00</span>";
+    var strip = "";
+    if (calView() === "day") {
+      var mon = mondayOf(cui.date);
+      for (var k = 0; k < 7; k++) {
+        var sd = addDays(mon, k), has = agendaEntries(sd).length;
+        strip += '<button type="button" class="cs-day' + (+sd === +cui.date ? " on" : "") + (+sd === +today ? " today" : "") + '" data-cal-pick="' + isoDate(sd) + '">' +
+          '<span class="cg-wd">' + DAYS_S[k].charAt(0) + '</span><span class="cg-dn">' + sd.getDate() + "</span>" + (has ? '<i class="cs-dot"></i>' : '<i class="cs-dot off"></i>') + "</button>";
+      }
+      strip = '<div class="cal-strip">' + strip + "</div>";
+    }
+    return strip + '<div class="cal-grid" style="--days:' + r.days + ";--hour:" + HOUR + 'px">' +
+      '<div class="cg-top"><div class="cg-row cg-heads"><div class="cg-gut"></div>' + head + "</div>" +
+      (anyAll ? '<div class="cg-row cg-alld"><div class="cg-gut cg-adl">all-day</div>' + allday + "</div>" : "") + "</div>" +
+      '<div class="cg-scroll" id="cgScroll"><div class="cg-body"><div class="cg-gut cg-hours">' + hours + "</div>" + cols + "</div></div></div>";
+  }
+
+  function renderCalList() {
+    var today = startOfDay(new Date()), from = cui.past ? addDays(today, -CAL_DAYS) : today, to = addDays(today, CAL_DAYS);
+    var html = "", lastWeek = "";
+    for (var d = from; d < to; d = addDays(d, 1)) {
+      var list = agendaFor(d), isToday = +d === +today;
+      if (!list.length && !isToday) continue;
+      var wk = weekKey(d);
+      if (wk !== lastWeek) {
+        lastWeek = wk;
+        html += '<div class="section-h cal-week">Week ' + isoWeek(d).week + ' <span class="gd">' + weekRange(mondayOf(d)) + "</span></div>";
+      }
+      var wd = DAYS[(d.getDay() + 6) % 7];
+      html += '<section class="group' + (d < today ? " past" : "") + '">' +
+        '<div class="group-title"><span class="gt">' + dayLabel(d) + '</span><span class="gd">' +
+        (dayLabel(d) === wd ? fmtDayMonth.format(d) : wd + ", " + fmtDayMonth.format(d)) + "</span></div>" +
+        '<div class="list">' + (list.length ? list.map(function (e) { return agendaRow(e, d); }).join("") : '<div class="empty">Nothing scheduled</div>') + "</div></section>";
+    }
+    return '<button type="button" class="done-toggle" data-cal-past aria-expanded="' + cui.past + '">' +
+      icon(cui.past ? "chevron-down" : "chevron-right") + (cui.past ? "Hide earlier" : "Show earlier") + "</button>" + html;
   }
   function agendaRow(e, d) {
     var now = new Date(), sp = evSpan(e), cls = "";
@@ -1548,47 +1699,93 @@
     else if (!e.allDay && sp[0] <= now && sp[1] > now) cls = " now";
     return evRow(e, d).replace('class="task ev"', 'class="task ev' + cls + '"');
   }
+
   function renderCalendar() {
-    var c = gconn(), today = startOfDay(new Date());
+    var c = gconn(), v = calView();
     $("headActions").innerHTML = c ? '<button type="button" class="ibtn" data-cal-refresh title="Refresh from Google" aria-label="Refresh from Google"' +
       (cui.busy ? " disabled" : "") + ">" + icon("rotate-ccw", cui.busy ? "spin" : "") + "</button>" : "";
-    var head = '<div class="page-head"><div><h1>Schedule</h1><div class="page-sub" id="calSub"></div></div></div>';
     if (!c) {
-      $("view").innerHTML = '<div class="page cal">' + head +
+      $("view").innerHTML = '<div class="page cal"><div class="page-head"><div><h1>Calendar</h1><div class="page-sub">Not connected</div></div></div>' +
         '<div class="empty">Connect Google Calendar to see your schedule here.</div>' +
         '<button type="button" class="btn solid" data-cal-connect>Connect Google Calendar</button></div>';
-      $("calSub").textContent = "Not connected";
       return;
     }
-    var from = cui.past ? addDays(today, -CAL_DAYS) : today, to = addDays(today, CAL_DAYS);
-    var html = "", count = 0, lastWeek = "";
-    for (var d = from; d < to; d = addDays(d, 1)) {
-      var list = agendaFor(d), isToday = +d === +today;
-      if (!list.length && !isToday) continue;
-      var wk = weekKey(d);
-      if (wk !== lastWeek) {
-        lastWeek = wk;
-        var mon = mondayOf(d);
-        html += '<div class="section-h cal-week">Week ' + isoWeek(d).week + ' <span class="gd">' + weekRange(mon) + "</span></div>";
-      }
-      count += list.length;
-      html += '<section class="group' + (d < today ? " past" : "") + '">' +
-        '<div class="group-title"><span class="gt">' + dayLabel(d) + '</span><span class="gd">' +
-        (dayLabel(d) === DAYS[(d.getDay() + 6) % 7] ? fmtDayMonth.format(d) : DAYS[(d.getDay() + 6) % 7] + ", " + fmtDayMonth.format(d)) + "</span>" +
-        "</div>" +
-        '<div class="list">' + (list.length ? list.map(function (e) { return agendaRow(e, d); }).join("") : '<div class="empty">Nothing scheduled</div>') + "</div></section>";
-    }
-    var earlier = '<button type="button" class="done-toggle" data-cal-past aria-expanded="' + cui.past + '">' +
-      icon(cui.past ? "chevron-down" : "chevron-right") + (cui.past ? "Hide earlier" : "Show earlier") + "</button>";
-    $("view").innerHTML = '<div class="page cal">' + head + earlier + html + "</div>";
-    $("calSub").innerHTML = (cui.error ? '<span class="late">' + esc(cui.error) + "</span>"
-      : c.error ? '<span class="late">' + esc(c.error) + "</span>"
-      : (cui.past ? "Last and next 4 weeks · " : "Next 4 weeks · ") + count + " " + plural(count, "event", "events") + " · synced " + shortWhen(Date.parse(c.at)));
+    var prev = $("cgScroll"), keep = prev ? prev.scrollTop : null;
+    $("view").innerHTML = '<div class="page cal ' + (v === "list" ? "" : "wide cal-g") + '">' + calHeadHTML() +
+      (v === "list" ? renderCalList() : renderCalGrid()) + "</div>";
+    var sc = $("cgScroll"); if (!sc) return;
+    // перший показ періоду — до «зараз» (або до 07:00); далі зберігаємо, де користувач прокрутив
+    var key = v + isoDate(calRange().from);
+    if (cui.scrollKey !== key || keep == null) {
+      cui.scrollKey = key;
+      var r = calRange(), today = startOfDay(new Date()), inRange = today >= r.from && today < addDays(r.from, r.days);
+      sc.scrollTop = (inRange ? Math.max(new Date().getHours() - 2, 0) : 7) * HOUR;
+    } else sc.scrollTop = keep;
   }
+  // лінія «зараз» — раз на хвилину
+  function calNowTick() {
+    var l = $("cgNow"); if (!l) return;
+    var now = new Date(); l.style.top = ((now - startOfDay(now)) / 60000 / 60 * HOUR) + "px";
+  }
+
+  /* ---------- деталі події (поповер / нижній лист на телефоні) ---------- */
+  function closeCalPop() {
+    var p = document.querySelector(".cal-pop"); if (!p) return false;
+    p.remove(); cui.pop = null; return true;
+  }
+  function openCalPop(id, day, anchor) {
+    closeCalPop();
+    var x = (Store.data.other || {})[id]; if (!x) return;
+    var e = x.d, c = calMap()[e.cal] || {}, d = day ? parseDay(day) : startOfDay(evSpan(e)[0]);
+    var sp = evSpan(e), when;
+    if (e.allDay) {
+      var last = addDays(sp[1], -1);
+      when = +last === +sp[0] ? cap(fmtWeekday.format(sp[0])) + ", " + fmtDayMonth.format(sp[0]) + " · All day"
+        : fmtDayMonth.format(sp[0]) + " – " + fmtDayMonth.format(last) + " · All day";
+    } else {
+      var same = startOfDay(sp[0]).getTime() === startOfDay(sp[1]).getTime();
+      when = cap(fmtWeekday.format(sp[0])) + ", " + fmtDayMonth.format(sp[0]) + " · " + hhmm(sp[0]) + "–" +
+        (same ? "" : fmtDayMonShort.format(sp[1]) + " ") + hhmm(sp[1]);
+    }
+    var p = document.createElement("div");
+    p.className = "cal-pop"; p.setAttribute("role", "dialog"); p.setAttribute("aria-label", e.title);
+    p.style.setProperty("--c", evColor(e));
+    p.innerHTML = '<div class="cp-head"><i class="cp-sw"></i><h3>' + esc(e.title) + "</h3>" +
+      '<button type="button" class="ibtn" data-cal-pop-close aria-label="Close">' + icon("x") + "</button></div>" +
+      '<div class="cp-row">' + icon("calendar-clock") + "<span>" + when + "</span></div>" +
+      (e.location ? '<div class="cp-row">' + icon("target") + "<span>" + esc(e.location) + "</span></div>" : "") +
+      '<div class="cp-row">' + icon("calendar") + '<span class="subj"><i style="background:' + esc(c.color || "#888") + '"></i>' + esc(c.name || "") + "</span></div>" +
+      (e.link ? '<a class="btn" href="' + esc(e.link) + '" target="_blank" rel="noopener">Open in Google Calendar</a>' : "");
+    document.body.appendChild(p);
+    cui.pop = id;
+    if (!isNarrow() && anchor) {
+      var b = anchor.getBoundingClientRect(), w = p.offsetWidth, h = p.offsetHeight;
+      var left = b.right + 8 + w > window.innerWidth - 16 ? b.left - w - 8 : b.right + 8;
+      left = Math.max(16, Math.min(left, window.innerWidth - w - 16));
+      var top = Math.max(16, Math.min(b.top, window.innerHeight - h - 16));
+      p.style.left = left + "px"; p.style.top = top + "px";
+    } else p.classList.add("sheet");
+    var cl = p.querySelector("[data-cal-pop-close]"); if (cl) cl.focus();
+  }
+
   document.addEventListener("click", function (e) {
-    if (e.target.closest("[data-cal-past]")) { cui.past = !cui.past; renderMain(); return; }
-    if (e.target.closest("[data-cal-connect]")) { openSettings("calendar"); return; }
-    if (e.target.closest("[data-cal-refresh]") && !cui.busy) {
+    var t = e.target;
+    if (t.closest("[data-cal-pop-close]")) { closeCalPop(); return; }
+    var ev = t.closest("[data-ev]");
+    if (ev) { e.preventDefault(); openCalPop(ev.getAttribute("data-ev"), ev.getAttribute("data-day"), ev); return; }
+    if (!t.closest(".cal-pop")) closeCalPop();
+    var m = t.closest("[data-cal-view]");
+    if (m) { cui.view = m.getAttribute("data-cal-view"); ls("lifeos.calView", cui.view); cui.scrollKey = ""; renderMain(); return; }
+    var n = t.closest("[data-cal-nav]");
+    if (n) { calShift(+n.getAttribute("data-cal-nav")); return; }
+    if (t.closest("[data-cal-today]")) { cui.date = startOfDay(new Date()); cui.scrollKey = ""; renderMain(); return; }
+    var dh = t.closest("[data-cal-day]");
+    if (dh && !dh.disabled) { cui.date = parseDay(dh.getAttribute("data-cal-day")); cui.view = "day"; ls("lifeos.calView", "day"); renderMain(); return; }
+    var pk = t.closest("[data-cal-pick]");
+    if (pk) { cui.date = parseDay(pk.getAttribute("data-cal-pick")); renderMain(); return; }
+    if (t.closest("[data-cal-past]")) { cui.past = !cui.past; renderMain(); return; }
+    if (t.closest("[data-cal-connect]")) { openSettings("calendar"); return; }
+    if (t.closest("[data-cal-refresh]") && !cui.busy) {
       cui.busy = true; cui.error = ""; renderMain();
       window.LifeSync.call("google-sync").then(function (res) {
         if (res && res.ok === false && res.error) throw new Error(res.error);
@@ -1596,6 +1793,19 @@
         .then(function () { cui.busy = false; window.LifeSync.syncNow(); renderMain(); });
     }
   });
+  // свайп вліво/вправо по сітці — попередній / наступний день чи тиждень
+  (function () {
+    var sx = 0, sy = 0, on = false;
+    document.addEventListener("touchstart", function (e) {
+      on = ui.route.name === "calendar" && calView() !== "list" && !!e.target.closest(".cal-grid") && e.touches.length === 1;
+      if (on) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }
+    }, { passive: true });
+    document.addEventListener("touchend", function (e) {
+      if (!on) return; on = false;
+      var dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.abs(dx) > 60 && Math.abs(dy) < 40) calShift(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  })();
 
   /* ---------- Settings → Calendar ---------- */
   function redirectUri() { return location.origin + location.pathname; }
@@ -1840,6 +2050,11 @@
     var typing = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || "");
     if ((e.ctrlKey || e.metaKey) && e.key === ",") { e.preventDefault(); $("settings").hidden ? openSettings() : closeSettings(); return; }
     if ((e.ctrlKey || e.metaKey) && e.key === "\\") { e.preventDefault(); setSidebar(!sidebarIsOpen()); return; }
+    if (e.key === "Escape" && closeCalPop()) return;
+    if (!typing && ui.route.name === "calendar" && $("settings").hidden && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); calShift(e.key === "ArrowLeft" ? -1 : 1); return; }
+      if (e.key === "t" || e.key === "T") { cui.date = startOfDay(new Date()); cui.scrollKey = ""; renderMain(); return; }
+    }
     if (e.key === "Escape") {
       var m = document.querySelector(".menu");
       if (m) { m.remove(); return; }
