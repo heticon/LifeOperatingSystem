@@ -59,6 +59,11 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 
 ## 3. Components
 
+### Page frame (every section)
+- Every page starts with `.page-head`: title (Inter 40px / 28px phones, `--fg`) + sub line (`--muted`), controls on the right (stacked under on phones). Home is the one exception (date + clock instead of a title).
+- Same top padding everywhere (32px, 16px in Simple layout and on phones).
+- Two widths only: **760px** for lists (To-dos, This week, Homework, Focus, Home), **1200px** for grids (Timetable, Calendar). Content column is centred.
+
 ### Navigation item
 - Anatomy: 16px icon (`--muted`), label 14px, optional count (mono 13px, `--muted`).
 - Size: 32px tall desktop, 44px phone; padding 0 12px.
@@ -97,7 +102,7 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 ### Calendar (week / day grid)
 - The one place with tinted fills (Bohdan asked for Google-like colour blocks): event block = `color-mix(event colour 20%, --card)` + 3px solid left edge in the event colour; text stays `--fg`, time in mono `--muted`.
 - Event colour: Google event colour (`colorId` → modern Google palette) or the calendar's colour.
-- Hour = 48px, hairline per hour, today column 5% `--accent-2` wash, "now" line 2px `--danger`.
+- The whole day fits on one screen: hours run from the earliest to the latest event (at least 07–21) and the hour height is fitted to the space (18–64px); only below 18px does the grid scroll. Hairline per hour, today column 5% `--accent-2` wash, "now" line 2px `--danger`.
 - Past events 55% opacity; current event gets a 1px outline in its colour. Details open in a popover (desktop) or bottom sheet (phone).
 
 ### Home

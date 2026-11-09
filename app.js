@@ -1405,10 +1405,12 @@
     var rows = hw.map(function (h) { return hwRow(h, "focus"); }).join("") + tk.map(function (t) { return taskRow(t, "focus"); }).join("");
 
     $("view").innerHTML = '<div class="page focus">' +
+      '<div class="page-head"><div><h1>Focus</h1><div class="page-sub">' +
+        (stats.n ? stats.n + " " + plural(stats.n, "session", "sessions") + " · " + stats.mins + " min today" : "No sessions yet today") + "</div></div>" +
       '<div class="modes" role="tablist" aria-label="Timer mode">' +
         Object.keys(MODES).map(function (m) {
           return '<button type="button" role="tab" data-tmode="' + m + '" aria-selected="' + (T.mode === m) + '">' + MODES[m] + "</button>";
-        }).join("") + "</div>" +
+        }).join("") + "</div></div>" +
       '<div class="timer">' +
         '<div class="t-time" id="fTime" role="timer" aria-live="off"></div>' +
         '<div class="t-bar"><i id="fBar"></i></div>' +
@@ -1420,8 +1422,7 @@
         '<button type="button" class="ibtn lg" id="fSkip" title="Skip to ' + MODES[nextMode()].toLowerCase() + '" aria-label="Skip">' + icon("skip-forward") + "</button>" +
       "</div>" +
       working +
-      '<div class="section-h"><span>' + (fallback ? "To-dos" : "Today") + '</span><span class="gd">' +
-        (stats.n ? stats.n + " " + plural(stats.n, "session", "sessions") + " · " + stats.mins + " min focused" : "No sessions yet today") + "</span></div>" +
+      '<div class="section-h"><span>' + (fallback ? "To-dos" : "Today") + '</span><span class="gd">' + "" + "</span></div>" +
       '<div class="list f-list">' + rows + "</div>" +
       (rows ? "" : '<div class="empty">Nothing planned for today.</div>') +
       addRow("week:" + cw + ":" + ti, "New task for today") +
@@ -1539,7 +1540,8 @@
      пізніше сюди ж додамо власні зустрічі й дати без часу.
      ========================================================= */
   var CAL_DAYS = 28;   // стільки днів уперед і назад тримає google-sync
-  var HOUR = 48;       // висота години в сітці, px
+  var HOUR = 48;       // висота години в сітці, px — підбирається під екран (calFit), щоб увесь день влазив без прокрутки
+  var H0 = 0, H1 = 24; // перша й остання години сітки (за подіями періоду, мінімум 07–21)
   // кольори подій Google (colorId 1–11), як у сучасному Google Calendar
   var GCOLORS = { "1": "#7986cb", "2": "#33b679", "3": "#8e24aa", "4": "#e67c73", "5": "#f6bf26", "6": "#f4511e",
     "7": "#039be5", "8": "#616161", "9": "#3f51b5", "10": "#0b8043", "11": "#d50000" };
@@ -1616,7 +1618,7 @@
       '<button type="button" class="btn" data-cal-today>Today</button>' +
       '<button type="button" class="ibtn" data-cal-nav="-1" aria-label="Previous">' + icon("chevron-left") + "</button>" +
       '<button type="button" class="ibtn" data-cal-nav="1" aria-label="Next">' + icon("chevron-right") + "</button>";
-    return '<div class="cal-head"><div class="cal-titles"><h1>' + title + '</h1><div class="page-sub" id="calSub">' + sub + "</div></div>" +
+    return '<div class="page-head cal-bar"><div class="cal-titles"><h1>' + title + '</h1><div class="page-sub" id="calSub">' + sub + "</div></div>" +
       '<div class="cal-ctrl"><div class="modes cal-modes" role="tablist" aria-label="Calendar view">' + modes + "</div>" +
       '<div class="cal-nav">' + nav + "</div></div></div>";
   }
@@ -1630,6 +1632,17 @@
   function renderCalGrid() {
     var r = calRange(), today = startOfDay(new Date()), now = new Date(), days = [];
     for (var i = 0; i < r.days; i++) days.push(addDays(r.from, i));
+    // діапазон годин: від найранішої до найпізнішої події, але щонайменше 07:00–21:00
+    var lo = 7, hi = 21;
+    days.forEach(function (d) {
+      agendaEntries(d).forEach(function (x) {
+        if (fullDay(x.e, d)) return;
+        var sp = evSpan(x.e), s = Math.max(0, (sp[0] - d) / 3600000), e = Math.min(24, (sp[1] - d) / 3600000);
+        if (e <= 0 || s >= 24) return;
+        lo = Math.min(lo, Math.floor(s)); hi = Math.max(hi, Math.ceil(e));
+      });
+    });
+    H0 = lo; H1 = hi;
     var head = "", allday = "", cols = "", anyAll = false;
     days.forEach(function (d) {
       var ents = agendaEntries(d), isT = +d === +today, past = d < today;
@@ -1644,19 +1657,21 @@
         return { x: x, s: s, e: Math.max(e, s + 15) };
       });
       var blocks = layoutDay(items).map(function (it) {
-        var top = it.s / 60 * HOUR, h = Math.max((it.e - it.s) / 60 * HOUR - 2, 18), sp = evSpan(it.x.e);
+        var s0 = Math.max(it.s, H0 * 60), e0 = Math.min(it.e, H1 * 60);
+        var top = (s0 / 60 - H0) * HOUR, h = Math.max((e0 - s0) / 60 * HOUR - 2, 12), sp = evSpan(it.x.e);
         var gone = sp[1] <= now, live = sp[0] <= now && sp[1] > now;
-        var time = evTime(it.x.e, d), tall = h >= 40;
-        return '<button type="button" class="cg-ev' + (gone ? " gone" : "") + (live ? " live" : "") + (tall ? " tall" : "") + '" data-ev="' + esc(it.x.id) + '" data-day="' + isoDate(d) + '"' +
+          var time = evTime(it.x.e, d), tall = h >= 40, xs = h < 22;
+        return '<button type="button" class="cg-ev' + (gone ? " gone" : "") + (live ? " live" : "") + (tall ? " tall" : "") + (xs ? " xs" : "") + '" data-ev="' + esc(it.x.id) + '" data-day="' + isoDate(d) + '"' +
           ' style="--c:' + esc(evColor(it.x.e)) + ";top:" + top + "px;height:" + h + "px;left:calc(" + (it.col / it.cols * 100) + "% + 2px);width:calc(" + (100 / it.cols) + '% - 4px)"' +
           ' aria-label="' + esc(it.x.e.title + ", " + time) + '">' +
           '<span class="cg-t">' + esc(it.x.e.title) + '</span><span class="cg-tm">' + time + "</span></button>";
       }).join("");
-      var line = isT ? '<div class="cg-now" id="cgNow" style="top:' + ((now - d0) / 60000 / 60 * HOUR) + 'px"></div>' : "";
+      var nowH = (now - d0) / 3600000;
+      var line = isT && nowH >= H0 && nowH <= H1 ? '<div class="cg-now" id="cgNow" style="top:' + ((nowH - H0) * HOUR) + 'px"></div>' : "";
       cols += '<div class="cg-col' + (isT ? " today" : "") + (past ? " past" : "") + '">' + blocks + line + "</div>";
     });
     var hours = "";
-    for (var hh = 1; hh < 24; hh++) hours += '<span style="top:' + hh * HOUR + 'px">' + pad(hh) + ":00</span>";
+    for (var hh = H0 + 1; hh < H1; hh++) hours += '<span style="top:' + (hh - H0) * HOUR + 'px">' + pad(hh) + ":00</span>";
     var strip = "";
     if (calView() === "day") {
       var mon = mondayOf(cui.date);
@@ -1667,7 +1682,7 @@
       }
       strip = '<div class="cal-strip">' + strip + "</div>";
     }
-    return strip + '<div class="cal-grid" style="--days:' + r.days + ";--hour:" + HOUR + 'px">' +
+    return strip + '<div class="cal-grid" style="--days:' + r.days + ";--hour:" + HOUR + "px;--span:" + (H1 - H0) + '">' +
       '<div class="cg-top"><div class="cg-row cg-heads"><div class="cg-gut"></div>' + head + "</div>" +
       (anyAll ? '<div class="cg-row cg-alld"><div class="cg-gut cg-adl">all-day</div>' + allday + "</div>" : "") + "</div>" +
       '<div class="cg-scroll" id="cgScroll"><div class="cg-body"><div class="cg-gut cg-hours">' + hours + "</div>" + cols + "</div></div></div>";
@@ -1714,18 +1729,25 @@
     $("view").innerHTML = '<div class="page cal ' + (v === "list" ? "" : "wide cal-g") + '">' + calHeadHTML() +
       (v === "list" ? renderCalList() : renderCalGrid()) + "</div>";
     var sc = $("cgScroll"); if (!sc) return;
+    // підганяємо висоту години, щоб увесь день влазив на екран (мінімум 18px — тоді вже прокрутка)
+    var fit = Math.max(18, Math.min(64, Math.floor((sc.clientHeight - 12) / (H1 - H0))));
+    if (fit !== HOUR) {
+      HOUR = fit;
+      $("view").querySelector(".page").innerHTML = calHeadHTML() + renderCalGrid();
+      sc = $("cgScroll");
+    }
     // перший показ періоду — до «зараз» (або до 07:00); далі зберігаємо, де користувач прокрутив
     var key = v + isoDate(calRange().from);
     if (cui.scrollKey !== key || keep == null) {
       cui.scrollKey = key;
       var r = calRange(), today = startOfDay(new Date()), inRange = today >= r.from && today < addDays(r.from, r.days);
-      sc.scrollTop = (inRange ? Math.max(new Date().getHours() - 2, 0) : 7) * HOUR;
+      sc.scrollTop = Math.max((inRange ? new Date().getHours() - 2 : 7) - H0, 0) * HOUR;
     } else sc.scrollTop = keep;
   }
   // лінія «зараз» — раз на хвилину
   function calNowTick() {
     var l = $("cgNow"); if (!l) return;
-    var now = new Date(); l.style.top = ((now - startOfDay(now)) / 60000 / 60 * HOUR) + "px";
+    var now = new Date(); l.style.top = (((now - startOfDay(now)) / 3600000 - H0) * HOUR) + "px";
   }
 
   /* ---------- деталі події (поповер / нижній лист на телефоні) ---------- */
@@ -2118,6 +2140,7 @@
     if (!isNarrow()) app.classList.remove("side-open");
     else app.classList.remove("side-closed");
     updateScrim();
+    if (ui.route.name === "calendar") { clearTimeout(cui.rz); cui.rz = setTimeout(renderCalendar, 150); }
   });
 
   /* =========================================================

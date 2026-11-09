@@ -1378,8 +1378,7 @@ html[data-layout] .page.cal .btn.solid { margin-top: 8px; }
 
 /* ---------- Calendar: week / day grid ---------- */
 html[data-layout] .page.cal-g { max-width: 1280px; padding-bottom: 32px; }
-html[data-layout] .cal-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
-html[data-layout] .cal-head h1 { font-family: var(--font-display); font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+html[data-layout] .cal-bar { flex-wrap: wrap; gap: 16px; margin-bottom: 16px; }
 html[data-layout] .cal-ctrl { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
 html[data-layout] .cal-nav { display: flex; align-items: center; gap: 4px; }
 html[data-layout] .cal-modes { margin: 0; }
@@ -1387,7 +1386,7 @@ html[data-layout] .cal-grid button { font: inherit; color: inherit; border: 0; b
 html[data-layout] .cg-row,
 html[data-layout] .cg-body { display: grid; grid-template-columns: 56px repeat(var(--days), minmax(0, 1fr)); }
 html[data-layout] .cg-top { position: sticky; top: 0; z-index: 3; background: var(--bg); border-bottom: 1px solid var(--line); }
-html[data-layout] .cg-dh { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 8px 4px 12px; border-radius: 6px; }
+html[data-layout] .cg-dh { display: flex; align-items: baseline; justify-content: center; gap: 8px; padding: 4px 4px 8px; border-radius: 6px; }
 html[data-layout] .cg-dh:not(:disabled):hover { background: var(--hover); }
 html[data-layout] .cg-dh:disabled { cursor: default; }
 html[data-layout] .cg-wd { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -1406,7 +1405,7 @@ html[data-layout] .cg-chip {
 }
 html[data-layout] .cg-chip:hover { background: color-mix(in srgb, var(--c) 32%, var(--card)) !important; }
 html[data-layout] .cg-chip.gone { opacity: .6; }
-html[data-layout] .cg-body { position: relative; height: calc(var(--hour) * 24); }
+html[data-layout] .cg-body { position: relative; height: calc(var(--hour) * var(--span, 24)); }
 html[data-layout] .cg-hours { position: relative; }
 html[data-layout] .cg-hours span {
   position: absolute; right: 8px; transform: translateY(-50%);
@@ -1470,7 +1469,7 @@ html[data-layout] .cs-day:focus-visible { outline: 2px solid var(--accent-2); ou
 
 @media (max-width: 860px) {
   html[data-layout] .page.cal-g { padding-left: 8px; padding-right: 8px; }
-  html[data-layout] .cal-head { padding: 0 8px; align-items: flex-start; flex-direction: column; gap: 12px; }
+  html[data-layout] .cal-bar { padding: 0 8px; align-items: flex-start; flex-direction: column; gap: 12px; }
   html[data-layout] .cal-ctrl { width: 100%; justify-content: space-between; }
   html[data-layout] .cal-nav .btn, html[data-layout] .cal-nav .ibtn { height: 44px; min-width: 44px; }
   html[data-layout] .cg-row, html[data-layout] .cg-body { grid-template-columns: 44px repeat(var(--days), minmax(0, 1fr)); }
@@ -1492,4 +1491,29 @@ html[data-layout="apple"] .page.cal-g { padding-bottom: 16px; }
 @media (max-width: 860px) {
   html[data-layout="apple"] .page.cal-g { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
   html[data-layout] .cal-grid[style*="--days:1"] .cg-heads { display: none; }
+}
+
+/* =====================================================================
+   One page frame for every section (v0.12)
+   Same header (.page-head: 40px title + sub, actions right), same top
+   padding, two widths: 760 for lists, 1200 for grids.
+   ===================================================================== */
+html[data-layout] .page.wide,
+html[data-layout] .page.cal-g { max-width: 1200px; }
+html[data-layout] .page.home,
+html[data-layout] .page.focus { max-width: 760px; }
+html[data-layout] .page.home { padding-top: 32px; }
+html[data-layout="apple"] .page.home { padding-top: 16px; }
+html[data-layout] .page.focus .page-head { align-self: stretch; }
+html[data-layout] .page.focus .page-head .modes { align-self: flex-end; }
+html[data-layout] .page.focus .timer { margin-top: 0; }
+/* short events when the whole day is squeezed onto one screen */
+html[data-layout] .cg-ev.xs { padding: 0 6px; gap: 6px; }
+html[data-layout] .cg-ev.xs .cg-t { font-size: 11px; line-height: 1.1; }
+html[data-layout] .cg-ev.xs .cg-tm { display: none; }
+html[data-layout] .cal-g .cg-scroll { padding-top: 8px; padding-bottom: 4px; }
+@media (max-width: 860px) {
+  html[data-layout] .page.home { padding-top: 16px; }
+  html[data-layout] .page.focus .page-head { flex-direction: column; align-items: flex-start; gap: 16px; }
+  html[data-layout] .page.focus .page-head .modes { align-self: flex-start; }
 }
