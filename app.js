@@ -11,6 +11,9 @@
      ========================================================= */
   var $ = function (id) { return document.getElementById(id); };
   var LOCALE = "en-GB";
+  // EMBED: this copy runs inside the right-hand pane of split view (no sidebar, no sync — the main window syncs)
+  var EMBED = /[?&]pane=1\b/.test(location.search);
+  if (EMBED) document.documentElement.classList.add("embed");
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function esc(s) {
@@ -1545,10 +1548,28 @@
   // кольори подій Google (colorId 1–11), як у сучасному Google Calendar
   var GCOLORS = { "1": "#7986cb", "2": "#33b679", "3": "#8e24aa", "4": "#e67c73", "5": "#f6bf26", "6": "#f4511e",
     "7": "#039be5", "8": "#616161", "9": "#3f51b5", "10": "#0b8043", "11": "#d50000" };
-  var cui = { view: ls("lifeos.calView") || null, date: startOfDay(new Date()), past: false, busy: false, error: "", pop: null, scrollKey: "" };
+  var cui = { view: ls("lifeos.calView") || null, zoom: !!ls("lifeos.calZoom"), date: startOfDay(new Date()), past: false, busy: false, error: "", pop: null, scrollKey: "", per: 3 };
+  // календар показується у Month view? (рішення користувача в налаштуваннях; за замовчуванням — усі, крім розпорядку «Schedule»)
+  function monthOn(calId) {
+    var c = calMap()[calId]; if (!c) return true;
+    return typeof c.month === "boolean" ? c.month : !/^schedule$/i.test(String(c.name || "").trim());
+  }
 
   function calView() { return cui.view || (isNarrow() ? "day" : "week"); }
-  function evColor(e) { var c = calMap()[e.cal] || {}; return GCOLORS[e.colorId] || c.color || "#888888"; }
+  // Bohdan’s own colours (taken from his Google Calendar screenshot). Google doesn’t send a colour for his
+  // repeating Schedule events, so we colour them by title. A Google event colour (colorId) still wins.
+  var TITLE_COLORS = [
+    ["morning routine", "#C9D1D9"], ["light focus", "#A9BBD8"], ["free time", "#AFC3E7"], ["focus", "#4F6D9A"],
+    ["school", "#2E7D6B"], ["work", "#D4B896"], ["home", "#B7A7D9"], ["training", "#E17C68"], ["wind down", "#D8A7B1"]
+  ];
+  var CAL_COLORS = { schedule: "#B39DDB" };
+  function evColor(e) {
+    if (GCOLORS[e.colorId]) return GCOLORS[e.colorId];
+    var t = String(e.title || "").toLowerCase().trim();
+    for (var i = 0; i < TITLE_COLORS.length; i++) if (t.indexOf(TITLE_COLORS[i][0]) === 0) return TITLE_COLORS[i][1];
+    var c = calMap()[e.cal] || {};
+    return CAL_COLORS[String(c.name || "").toLowerCase()] || c.color || "#888888";
+  }
   // [{id, e}] для дня d — події увімкнених календарів
   function agendaEntries(d) {
     var o = Store.data.other || {}, cm = calMap(), d0 = startOfDay(d), d1 = addDays(d0, 1), out = [];
@@ -1572,11 +1593,17 @@
   function calRange() {
     var v = calView();
     if (v === "week") { var m = mondayOf(cui.date); return { from: m, days: 7 }; }
+    if (v === "month") {
+      var first = new Date(cui.date.getFullYear(), cui.date.getMonth(), 1), from = mondayOf(first);
+      var dim = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      return { from: from, days: Math.ceil((Math.round((first - from) / 864e5) + dim) / 7) * 7, month: first };
+    }
     return { from: startOfDay(cui.date), days: 1 };
   }
   function calShift(n) {
     var v = calView();
-    cui.date = v === "week" ? addDays(cui.date, 7 * n) : v === "day" ? addDays(cui.date, n) : cui.date;
+    cui.date = v === "week" ? addDays(cui.date, 7 * n) : v === "day" ? addDays(cui.date, n)
+      : v === "month" ? new Date(cui.date.getFullYear(), cui.date.getMonth() + n, 1) : cui.date;
     cui.pop = null; closeCalPop(); renderMain();
   }
   var fmtMonthYear = new Intl.DateTimeFormat(LOCALE, { month: "long", year: "numeric" });
@@ -1604,23 +1631,33 @@
 
   function calHeadHTML() {
     var v = calView(), r = calRange(), last = addDays(r.from, r.days - 1);
-    var title = v === "list" ? "Schedule" : fmtMonthYear.format(r.from);
-    if (v !== "list" && last.getMonth() !== r.from.getMonth()) title = fmtMonShort.format(r.from) + " – " + fmtMonShort.format(last) + " " + last.getFullYear();
+    var title = v === "list" ? "Schedule" : v === "month" ? fmtMonthYear.format(r.month) : fmtMonthYear.format(r.from);
+    if ((v === "week" || v === "day") && last.getMonth() !== r.from.getMonth()) title = fmtMonShort.format(r.from) + " – " + fmtMonShort.format(last) + " " + last.getFullYear();
     var sub = v === "week" ? "Week " + isoWeek(r.from).week + " · " + weekRange(r.from)
-      : v === "day" ? cap(fmtWeekday.format(r.from)) + ", " + fmtDayMonth.format(r.from) : "";
+      : v === "day" ? cap(fmtWeekday.format(r.from)) + ", " + fmtDayMonth.format(r.from)
+      : v === "month" ? "Events and appointments" : "";
     var c = gconn();
     if (c && c.error) sub += (sub ? " · " : "") + '<span class="late">' + esc(c.error) + "</span>";
     if (cui.error) sub += (sub ? " · " : "") + '<span class="late">' + esc(cui.error) + "</span>";
-    var modes = [["day", "Day"], ["week", "Week"], ["list", "List"]].map(function (m) {
+    // на широкому екрані кнопки живуть у верхній панелі — так календарю лишається більше місця
+    return '<div class="page-head cal-bar"><div class="cal-titles"><h1>' + title + '</h1><div class="page-sub" id="calSub">' + sub + "</div></div>" +
+      (isNarrow() ? calCtrlHTML("modes") : "") + "</div>";
+  }
+  // part: "modes" (Day/Week/…), "nav" (fit, Today, ‹ ›) or both
+  function calCtrlHTML(part) {
+    var v = calView();
+    var modes = [["day", "Day"], ["week", "Week"], ["month", "Month"], ["list", "List"]].map(function (m) {
       return '<button type="button" role="tab" data-cal-view="' + m[0] + '" aria-selected="' + (v === m[0]) + '">' + m[1] + "</button>";
     }).join("");
+    var fit = v === "day" || v === "week" ? '<button type="button" class="ibtn" data-cal-fit aria-pressed="' + !cui.zoom + '" title="' +
+      (cui.zoom ? "Fit the whole day on screen" : "Zoom in (bigger hours, scroll)") + '" aria-label="' + (cui.zoom ? "Fit the whole day" : "Zoom in") + '">' +
+      icon(cui.zoom ? "fold-vertical" : "unfold-vertical") + "</button>" : "";
     var nav = v === "list" ? "" :
       '<button type="button" class="btn" data-cal-today>Today</button>' +
       '<button type="button" class="ibtn" data-cal-nav="-1" aria-label="Previous">' + icon("chevron-left") + "</button>" +
       '<button type="button" class="ibtn" data-cal-nav="1" aria-label="Next">' + icon("chevron-right") + "</button>";
-    return '<div class="page-head cal-bar"><div class="cal-titles"><h1>' + title + '</h1><div class="page-sub" id="calSub">' + sub + "</div></div>" +
-      '<div class="cal-ctrl"><div class="modes cal-modes" role="tablist" aria-label="Calendar view">' + modes + "</div>" +
-      '<div class="cal-nav">' + nav + "</div></div></div>";
+    var m = '<div class="modes cal-modes" role="tablist" aria-label="Calendar view">' + modes + "</div>", n = '<div class="cal-nav">' + fit + nav + "</div>";
+    return '<div class="cal-ctrl">' + (part === "modes" ? m : part === "nav" ? n : m + n) + "</div>";
   }
 
   function chip(x, d) {
@@ -1642,7 +1679,7 @@
         lo = Math.min(lo, Math.floor(s)); hi = Math.max(hi, Math.ceil(e));
       });
     });
-    H0 = lo; H1 = hi;
+    H0 = cui.zoom ? 0 : lo; H1 = cui.zoom ? 24 : hi;
     var head = "", allday = "", cols = "", anyAll = false;
     days.forEach(function (d) {
       var ents = agendaEntries(d), isT = +d === +today, past = d < today;
@@ -1688,6 +1725,27 @@
       '<div class="cg-scroll" id="cgScroll"><div class="cg-body"><div class="cg-gut cg-hours">' + hours + "</div>" + cols + "</div></div></div>";
   }
 
+  // Month: тільки події й зустрічі (без щоденного розпорядку), 6 тижнів на одному екрані
+  function renderCalMonth() {
+    var r = calRange(), today = startOfDay(new Date()), now = new Date(), per = cui.per, cells = "";
+    for (var i = 0; i < r.days; i++) {
+      var d = addDays(r.from, i), out = d.getMonth() !== r.month.getMonth();
+      var ents = agendaEntries(d).filter(function (x) { return monthOn(x.e.cal); });
+      ents.sort(function (a, b) { return (fullDay(b.e, d) - fullDay(a.e, d)) || (evSpan(a.e)[0] - evSpan(b.e)[0]); });
+      var shown = ents.length > per ? ents.slice(0, Math.max(per - 1, 0)) : ents, more = ents.length - shown.length;
+      cells += '<div class="cm-cell' + (out ? " out" : "") + (+d === +today ? " today" : "") + (d < today ? " past" : "") + '">' +
+        '<button type="button" class="cm-dn" data-cal-day="' + isoDate(d) + '" aria-label="' + esc(cap(fmtWeekday.format(d)) + ", " + fmtDayMonth.format(d)) + '">' + d.getDate() + "</button>" +
+        shown.map(function (x) {
+          var all = fullDay(x.e, d), gone = evSpan(x.e)[1] <= now;
+          return '<button type="button" class="cm-ev' + (all ? " all" : "") + (gone ? " gone" : "") + '" style="--c:' + esc(evColor(x.e)) + '" data-ev="' + esc(x.id) + '" data-day="' + isoDate(d) + '">' +
+            (all ? "" : '<span class="cm-tm">' + hhmm(evSpan(x.e)[0]) + "</span>") + '<span class="cm-t">' + esc(x.e.title) + "</span></button>";
+        }).join("") +
+        (more ? '<button type="button" class="cm-more" data-cal-day="' + isoDate(d) + '">+' + more + " more</button>" : "") + "</div>";
+    }
+    var heads = DAYS_S.map(function (w) { return '<div class="cm-wd">' + w + "</div>"; }).join("");
+    return '<div class="cal-month" style="--weeks:' + (r.days / 7) + '"><div class="cm-heads">' + heads + '</div><div class="cm-grid" id="cmGrid">' + cells + "</div></div>";
+  }
+
   function renderCalList() {
     var today = startOfDay(new Date()), from = cui.past ? addDays(today, -CAL_DAYS) : today, to = addDays(today, CAL_DAYS);
     var html = "", lastWeek = "";
@@ -1717,8 +1775,8 @@
 
   function renderCalendar() {
     var c = gconn(), v = calView();
-    $("headActions").innerHTML = c ? '<button type="button" class="ibtn" data-cal-refresh title="Refresh from Google" aria-label="Refresh from Google"' +
-      (cui.busy ? " disabled" : "") + ">" + icon("rotate-ccw", cui.busy ? "spin" : "") + "</button>" : "";
+    $("headActions").innerHTML = (c ? calCtrlHTML(isNarrow() ? "nav" : "") : "") + (c ? '<button type="button" class="ibtn" data-cal-refresh title="Refresh from Google" aria-label="Refresh from Google"' +
+      (cui.busy ? " disabled" : "") + ">" + icon("rotate-ccw", cui.busy ? "spin" : "") + "</button>" : "");
     if (!c) {
       $("view").innerHTML = '<div class="page cal"><div class="page-head"><div><h1>Calendar</h1><div class="page-sub">Not connected</div></div></div>' +
         '<div class="empty">Connect Google Calendar to see your schedule here.</div>' +
@@ -1726,11 +1784,20 @@
       return;
     }
     var prev = $("cgScroll"), keep = prev ? prev.scrollTop : null;
-    $("view").innerHTML = '<div class="page cal ' + (v === "list" ? "" : "wide cal-g") + '">' + calHeadHTML() +
-      (v === "list" ? renderCalList() : renderCalGrid()) + "</div>";
+    var body = function () { return v === "list" ? renderCalList() : v === "month" ? renderCalMonth() : renderCalGrid(); };
+    $("view").innerHTML = '<div class="page cal ' + (v === "list" ? "" : "wide cal-g") + (cui.zoom ? " zoom" : "") + '">' + calHeadHTML() + body() + "</div>";
+    if (v === "month") {
+      // скільки подій влазить у клітинку — за її висотою
+      var g = $("cmGrid"), cell = g && g.firstElementChild;
+      if (cell) {
+        var per = Math.max(1, Math.floor((cell.clientHeight - 32) / (isNarrow() ? 8 : 22)));
+        if (per !== cui.per) { cui.per = per; $("view").querySelector(".page").innerHTML = calHeadHTML() + body(); }
+      }
+      return;
+    }
     var sc = $("cgScroll"); if (!sc) return;
     // підганяємо висоту години, щоб увесь день влазив на екран (мінімум 18px — тоді вже прокрутка)
-    var fit = Math.max(18, Math.min(64, Math.floor((sc.clientHeight - 12) / (H1 - H0))));
+    var fit = cui.zoom ? (isNarrow() ? 48 : 56) : Math.max(18, Math.min(64, Math.floor((sc.clientHeight - 12) / (H1 - H0))));
     if (fit !== HOUR) {
       HOUR = fit;
       $("view").querySelector(".page").innerHTML = calHeadHTML() + renderCalGrid();
@@ -1796,6 +1863,7 @@
     var ev = t.closest("[data-ev]");
     if (ev) { e.preventDefault(); openCalPop(ev.getAttribute("data-ev"), ev.getAttribute("data-day"), ev); return; }
     if (!t.closest(".cal-pop")) closeCalPop();
+    if (t.closest("[data-cal-fit]")) { cui.zoom = !cui.zoom; ls("lifeos.calZoom", cui.zoom); cui.scrollKey = ""; renderMain(); return; }
     var m = t.closest("[data-cal-view]");
     if (m) { cui.view = m.getAttribute("data-cal-view"); ls("lifeos.calView", cui.view); cui.scrollKey = ""; renderMain(); return; }
     var n = t.closest("[data-cal-nav]");
@@ -1850,6 +1918,9 @@
       var checked = k.on !== false;
       return '<button type="button" class="cal-row" role="checkbox" aria-checked="' + checked + '" data-gcal="' + esc(k.cal) + '">' +
         '<span class="check">' + icon("check") + '</span><i style="background:' + esc(k.color) + '"></i><span>' + esc(k.name) + "</span></button>";
+    }).join("") + '<div class="cal-head">Show in Month view</div>' + cals.map(function (k) {
+      return '<button type="button" class="cal-row" role="checkbox" aria-checked="' + monthOn(k.cal) + '" data-gcalm="' + esc(k.cal) + '">' +
+        '<span class="check">' + icon("check") + '</span><i style="background:' + esc(k.color) + '"></i><span>' + esc(k.name) + "</span></button>";
     }).join("") : "";
   }
   function gRun(label, fn) {
@@ -1898,6 +1969,12 @@
       if (a === "disconnect" && confirm("Disconnect Google Calendar? Events disappear from Life OS on all devices. Your Google calendars stay as they are.")) {
         gRun("Disconnecting…", function () { return window.LifeSync.call("google-connect", { action: "disconnect" }); });
       }
+      return;
+    }
+    var mr = e.target.closest("[data-gcalm]");
+    if (mr) {
+      var om = Store.data.other["gcal:" + mr.getAttribute("data-gcalm")];
+      if (om) { om.d.month = !monthOn(om.d.cal); Store.save(); renderCalendarPane(); renderAll(); }
       return;
     }
     var row = e.target.closest("[data-gcal]");
@@ -2032,6 +2109,23 @@
     try { localStorage.setItem(THEME_KEY, k); } catch (err) {}
     window.lifeosApplyTheme(k); renderThemes();
   });
+  function renderSizes() {
+    var cur = (function () { try { return localStorage.getItem("lifeos.size") || "m"; } catch (e) { return "m"; } })();
+    [].forEach.call($("sizeModes").querySelectorAll("[data-size]"), function (b) { b.setAttribute("aria-checked", b.getAttribute("data-size") === cur); b.setAttribute("aria-selected", b.getAttribute("data-size") === cur); });
+  }
+  $("sizeModes").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-size]"); if (!b) return;
+    var k = b.getAttribute("data-size");
+    try { localStorage.setItem("lifeos.size", k); } catch (err) {}
+    window.lifeosApplySize(k); renderSizes();
+    if (ui.route.name === "calendar") renderCalendar();
+  });
+  // the other pane / tab changed the look → follow it
+  window.addEventListener("storage", function (e) {
+    if (e.key === THEME_KEY) window.lifeosApplyTheme(e.newValue || "auto");
+    if (e.key === "lifeos.size") { window.lifeosApplySize(e.newValue || "m"); if (ui.route.name === "calendar") renderCalendar(); }
+    if (e.key === LAYOUT_KEY) { window.lifeosApplyLayout(e.newValue); renderAll(); }
+  });
   if (window.matchMedia) {
     var mq = window.matchMedia("(prefers-color-scheme: dark)");
     var onSys = function () { if (themeChoice() === "auto") window.lifeosApplyTheme("auto"); };
@@ -2046,12 +2140,12 @@
   }
   function openSettings(pane) {
     if (isNarrow()) setSidebar(false);
-    renderThemes(); renderLayouts();
+    renderThemes(); renderLayouts(); renderSizes();
     var n = tasks().length, m = projects().length;
     var hn = hwList().length, nn = notesList().length;
     $("dataStat").textContent = n + " " + plural(n, "task", "tasks") + " · " + m + " " + plural(m, "project", "projects") +
       " · " + hn + " homework · " + nn + " " + plural(nn, "note", "notes");
-    renderAccount(); renderCalendarPane();
+    renderAccount(); renderCalendarPane(); exSize();
     showPane(typeof pane === "string" ? pane : "look");
     $("settings").hidden = false;
     var sel = document.querySelector('.theme-card[aria-checked="true"]'); if (sel) sel.focus();
@@ -2116,6 +2210,7 @@
     else if (r.name === "subject") renderSubject();
     else if (r.name === "note") renderNote();
     renderSidebar(); renderCrumbs(); renderChrome();
+    if (EMBED) embedHead();
     $("view").scrollTop = keepScroll;
     if (ui.refocus) {
       var inp = document.querySelector('[data-add-key="' + ui.refocus + '"]');
@@ -2133,7 +2228,7 @@
     if (ui.selected && !(ui.selKind === "hw" ? hwById(ui.selected) : taskById(ui.selected))) closeDetail();
     if (ui.route.name !== "timetable") { ui.ttEdit = false; ui.ttNew = null; }
     renderMain();
-    ls("lifeos.lastRoute", location.hash);
+    if (!EMBED) ls("lifeos.lastRoute", location.hash);
   });
 
   window.addEventListener("resize", function () {
@@ -2196,7 +2291,7 @@
     document.body.classList.toggle("auth-on", on);
     if (on) setTimeout(function () { $("authEmail").focus(); }, 50);
   }
-  if (window.LifeSync) {
+  if (window.LifeSync && !EMBED) {
     if (!window.LifeSync.hasSession()) showAuth(true);
     window.LifeSync.init({
       records: function () { return Store.records(); },
@@ -2277,5 +2372,123 @@
     });
   }
 
-  window.__lifeos = { isoWeek: isoWeek, weeksInYear: weeksInYear, Store: Store, eventsOn: eventsOn, evTime: evTime, calFact: calFact };
+  /* =========================================================
+     Split view: a second pane on the right (desktop only), like Obsidian.
+     The pane is this same app in an iframe (?pane=1). Both share localStorage;
+     the main window does the syncing. Tabs/headers appear only when split.
+     ========================================================= */
+  function paneRoutes() {
+    return [["#home", "Home"], ["#focus", "Focus"], ["#calendar", "Calendar"], ["#todos", "To-dos"], ["#week", "This week"],
+      ["#timetable", "Timetable"], ["#homework", "Homework"]];
+  }
+  function paneLabel(h) { var PANE_ROUTES = paneRoutes(); for (var i = 0; i < PANE_ROUTES.length; i++) if (PANE_ROUTES[i][0] === h) return PANE_ROUTES[i][1]; return null; }
+  function embedHead() {
+    var h = location.hash || "#home", cur = paneLabel(h);
+    $("crumbs").innerHTML = '<label class="p2-pick"><span class="sr">Section</span><select id="p2Route" aria-label="Section in this pane">' +
+      (cur ? "" : '<option value="' + esc(h) + '" selected>' + esc(document.title.replace(/ · Life OS$/, "") || "This page") + "</option>") +
+      paneRoutes().map(function (r) { return '<option value="' + r[0] + '"' + (r[0] === h ? " selected" : "") + ">" + r[1] + "</option>"; }).join("") +
+      "</select>" + icon("chevron-down") + "</label>";
+    if (!$("p2Close")) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "ibtn"; b.id = "p2Close"; b.title = "Close pane"; b.setAttribute("aria-label", "Close pane");
+      b.innerHTML = icon("x");
+      b.addEventListener("click", function () { parent.postMessage({ lifeosPane: "close" }, location.origin); });
+      $("headActions").parentNode.appendChild(b);
+    }
+    $("p2Route").onchange = function (e) { location.hash = e.target.value; };
+    try { parent.postMessage({ lifeosPane: "route", hash: h }, location.origin); } catch (e) {}
+  }
+  // both windows: when the other one saves, reload the data and redraw (the main window also queues it for sync)
+  window.addEventListener("storage", function (e) {
+    if (e.key !== Store.KEY || !e.newValue) return;
+    Store.load();
+    if (!EMBED && window.LifeSync) window.LifeSync.changed();
+    renderWhenIdle();
+  });
+  if (EMBED) {
+    $("auth").hidden = true;
+  } else {
+    var splitW = function () { return window.innerWidth >= 1000; };
+    var openPane = function (hash) {
+      if (!splitW()) { location.hash = hash; return; }
+      var f = $("p2Frame");
+      app.classList.add("split"); $("pane2").hidden = false;
+      if (!f.getAttribute("src")) f.src = "./?pane=1" + hash;
+      else f.contentWindow.location.hash = hash;
+      ls("lifeos.pane2", hash); renderSplitBtn();
+    };
+    var closePane = function () {
+      app.classList.remove("split"); $("pane2").hidden = true; $("p2Frame").removeAttribute("src");
+      ls("lifeos.pane2", null); renderSplitBtn();
+      if (ui.route.name === "calendar") renderCalendar();
+    };
+    var renderSplitBtn = function () {
+      var on = app.classList.contains("split"), b = $("splitBtn");
+      b.setAttribute("aria-pressed", on); b.title = on ? "Close split view" : "Split view: open this page on the right";
+    };
+    $("splitBtn").addEventListener("click", function () {
+      if (app.classList.contains("split")) closePane(); else openPane(location.hash || "#home");
+    });
+    window.addEventListener("message", function (e) {
+      if (e.origin !== location.origin || !e.data || !e.data.lifeosPane) return;
+      if (e.data.lifeosPane === "close") closePane();
+      if (e.data.lifeosPane === "route") ls("lifeos.pane2", e.data.hash);
+    });
+    // right-click a section in the sidebar → open it on the right
+    $("sidebar").addEventListener("contextmenu", function (e) {
+      var a = e.target.closest('a[href^="#"]'); if (!a || !splitW()) return;
+      e.preventDefault();
+      var old = document.querySelector(".menu"); if (old) old.remove();
+      var m = document.createElement("div");
+      m.className = "menu ctx"; m.setAttribute("role", "menu");
+      m.innerHTML = '<button type="button" role="menuitem" data-ctx="right">' + icon("columns-2") + "<span>Open on the right</span></button>" +
+        '<button type="button" role="menuitem" data-ctx="here">' + icon("chevron-right") + "<span>Open here</span></button>";
+      document.body.appendChild(m);
+      m.style.left = Math.min(e.clientX, window.innerWidth - m.offsetWidth - 8) + "px";
+      m.style.top = Math.min(e.clientY, window.innerHeight - m.offsetHeight - 8) + "px";
+      var href = a.getAttribute("href");
+      m.addEventListener("click", function (ev) {
+        var b = ev.target.closest("[data-ctx]"); if (!b) return;
+        m.remove();
+        if (b.getAttribute("data-ctx") === "right") openPane(href); else location.hash = href;
+      });
+      m.querySelector("button").focus();
+      setTimeout(function () {
+        document.addEventListener("click", function off(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener("click", off); } });
+      }, 0);
+    });
+    // drag the divider to resize
+    $("p2Div").addEventListener("pointerdown", function (e) {
+      e.preventDefault();
+      var div = e.currentTarget; div.setPointerCapture(e.pointerId); app.classList.add("p2-drag");
+      var move = function (ev) {
+        var w = Math.max(320, Math.min(window.innerWidth - ev.clientX, window.innerWidth - 560));
+        app.style.setProperty("--p2-w", w + "px");
+      };
+      var up = function () {
+        div.removeEventListener("pointermove", move); div.removeEventListener("pointerup", up); app.classList.remove("p2-drag");
+        ls("lifeos.p2w", app.style.getPropertyValue("--p2-w"));
+        if (ui.route.name === "calendar") renderCalendar();
+      };
+      div.addEventListener("pointermove", move); div.addEventListener("pointerup", up);
+    });
+    if (ls("lifeos.p2w")) app.style.setProperty("--p2-w", ls("lifeos.p2w"));
+    if (ls("lifeos.pane2") && splitW()) openPane(ls("lifeos.pane2"));
+    renderSplitBtn();
+  }
+
+  window.__lifeos = { isoWeek: isoWeek, weeksInYear: weeksInYear, Store: Store, eventsOn: eventsOn, evTime: evTime, calFact: calFact, monthOn: monthOn };
+
+  // Export (export.js): show the size before downloading
+  function exOpts() { return { cal: $("exCal").value, done: $("exDone").value === "1" }; }
+  function exSize() {
+    if (!window.LifeExport) return;
+    var f = $("exFmt").value;
+    window.LifeExport.build(f, exOpts()).then(function (r) {
+      var kb = r.blob.size / 1024, tok = r.text ? Math.round(r.text.length / 4) : 0;
+      $("exSize").textContent = (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " KB" + (tok ? " · ~" + (tok >= 1000 ? (tok / 1000).toFixed(1) + "k" : tok) + " tokens" : "");
+    });
+  }
+  ["exFmt", "exCal", "exDone"].forEach(function (id) { $(id).addEventListener("change", exSize); });
+  $("exGo").addEventListener("click", function () { window.LifeExport.download($("exFmt").value, exOpts()).then(exSize); });
 })();

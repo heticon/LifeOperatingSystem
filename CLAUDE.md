@@ -49,5 +49,7 @@ Personal "Life OS" of Bohdan (18, Ukrainian student in Hamburg, Germany). A smal
    - Edge Functions (`supabase/functions`, deploy: `npx supabase functions deploy google-connect google-sync --remote=ulezusdpxglednvswkyk --use-api`): `google-connect` (exchange / disconnect), `google-sync` (user JWT = sync now; no JWT = cron, skips users synced < 10 min ago). Secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (only Bohdan sets the secret).
    - Writes into `items`: `gconn` (status), `gcal:<id>` (calendar, `on` = shown), `gev:<cal>:<id>` (events ±4 weeks). Client reads them from `Store.data.other`.
    - pg_cron job `google-sync` every 15 min (`supabase/cron.sql`). `privacy.html` is the consent-screen privacy link. `.nojekyll` is required (Pages Jekyll build failed).
+   - Month view needs a longer window: calendars with `month` on are read −35/+185 days; others (the daily Schedule) ±28. `month` lives on the `gcal:*` row (user choice, kept by the server).
+   - v0.13: Month view, Fit/Zoom, Bohdan's title colours, Export (Settings → Data: `export.js`, Markdown/JSON/HTML/TXT/ZIP, compact with a legend), Split view (iframe `?pane=1`), themes Sand/Mist/Rose/Nord/Forest/Midnight, Text size (`lifeos.size`, CSS zoom).
 5. Life OS connector (MCP) on a Cloudflare Worker with OAuth, so Claude can read and write his tasks/homework/events.
 6. Google Drive.

@@ -7,6 +7,8 @@
 import { createClient, SupabaseClient } from "npm:@supabase/supabase-js@2.118.0";
 
 export const WINDOW_DAYS = 28;
+// Calendars shown in the Month view (everything except the daily "Schedule") are read further ahead.
+export const MONTH_BACK = 35, MONTH_AHEAD = 185;
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const API = "https://www.googleapis.com/calendar/v3";
 
@@ -129,18 +131,21 @@ export async function syncUser(db: SupabaseClient, userId: string) {
     const want = new Map<string, { kind: string; data: any }>();
 
     const cals = await gget(token, "/users/me/calendarList", { maxResults: "250" });
-    const on: string[] = [];
+    const on: { id: string; long: boolean }[] = [];
     for (const c of cals) {
       const id = "gcal:" + c.id, prev = have.get(id);
+      const name = c.summaryOverride || c.summary || c.id;
       const enabled = prev ? prev.data.on !== false : true; // new calendars start on; the user's choice is kept
-      want.set(id, { kind: "calendar", data: { cal: c.id, name: c.summaryOverride || c.summary || c.id,
-        color: c.backgroundColor || "#888888", primary: !!c.primary, on: enabled } });
-      if (enabled) on.push(c.id);
+      // month: shown in the Month view; the daily "Schedule" calendar is off by default, the user's choice is kept
+      const month = prev && typeof prev.data.month === "boolean" ? prev.data.month : !/^schedule$/i.test(String(name).trim());
+      want.set(id, { kind: "calendar", data: { cal: c.id, name,
+        color: c.backgroundColor || "#888888", primary: !!c.primary, on: enabled, month } });
+      if (enabled) on.push({ id: c.id, long: month });
     }
 
-    const t0 = new Date(Date.now() - WINDOW_DAYS * 864e5).toISOString();
-    const t1 = new Date(Date.now() + WINDOW_DAYS * 864e5).toISOString();
-    for (const cal of on) {
+    for (const { id: cal, long } of on) {
+      const t0 = new Date(Date.now() - (long ? MONTH_BACK : WINDOW_DAYS) * 864e5).toISOString();
+      const t1 = new Date(Date.now() + (long ? MONTH_AHEAD : WINDOW_DAYS) * 864e5).toISOString();
       const evs = await gget(token, "/calendars/" + encodeURIComponent(cal) + "/events",
         { timeMin: t0, timeMax: t1, singleEvents: "true", orderBy: "startTime", maxResults: "2500" });
       for (const e of evs) {

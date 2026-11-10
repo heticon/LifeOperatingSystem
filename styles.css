@@ -1517,3 +1517,123 @@ html[data-layout] .cal-g .cg-scroll { padding-top: 8px; padding-bottom: 4px; }
   html[data-layout] .page.focus .page-head { flex-direction: column; align-items: flex-start; gap: 16px; }
   html[data-layout] .page.focus .page-head .modes { align-self: flex-start; }
 }
+
+/* =====================================================================
+   Calendar v0.13: controls in the top bar, Fit / Zoom, Month view
+   ===================================================================== */
+html[data-layout] .head-actions .cal-ctrl { gap: 8px; margin-right: 8px; }
+html[data-layout] .head-actions .cal-modes { padding: 2px; border-radius: 8px; }
+html[data-layout] .head-actions .cal-modes button { height: 28px; }
+html[data-layout] .head-actions .cal-nav .btn { height: 32px; }
+html[data-layout] .ibtn[aria-pressed="true"] { color: var(--fg); }
+@media (min-width: 861px) {
+  /* title and sub on one line — more room for the grid */
+  html[data-layout] .cal-bar .cal-titles { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+  html[data-layout] .cal-bar .page-sub { margin-top: 0; }
+  html[data-layout] .page.cal-g { padding-top: 16px; }
+}
+html[data-layout] .cg-dh { padding: 2px 4px 6px; }
+
+/* Month */
+html[data-layout] .cal-month { flex: 1; min-height: 360px; display: flex; flex-direction: column; }
+html[data-layout] .cm-heads, html[data-layout] .cm-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+html[data-layout] .cm-wd { padding: 0 8px 8px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+html[data-layout] .cm-grid { flex: 1; min-height: 0; grid-template-rows: repeat(var(--weeks), minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+html[data-layout] .cm-cell { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: 2px; padding: 4px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+html[data-layout] .cm-cell.out { background: color-mix(in srgb, var(--hover) 45%, transparent); }
+html[data-layout] .cm-cell.out .cm-dn { color: var(--muted); }
+html[data-layout] .cm-cell.today { background: color-mix(in srgb, var(--accent-2) 5%, transparent); }
+html[data-layout] .cm-dn {
+  align-self: flex-start; min-width: 24px; height: 24px; padding: 0 4px; border: 0; border-radius: 12px; background: none;
+  font: inherit; font-family: var(--font-display); font-size: 13px; font-weight: 600; color: var(--fg); cursor: pointer; font-variant-numeric: tabular-nums;
+}
+html[data-layout] .cm-dn:hover { background: var(--hover); }
+html[data-layout] .cm-cell.today .cm-dn { background: var(--accent-2); color: var(--bg); }
+html[data-layout] .cm-ev {
+  display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; height: 20px; padding: 0 6px; border: 0; border-radius: 4px;
+  background: none; color: var(--fg); font: inherit; font-size: 12px; text-align: left; cursor: pointer; flex: none;
+}
+html[data-layout] .cm-ev::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+html[data-layout] .cm-ev:hover { background: var(--hover); }
+html[data-layout] .cm-ev.all { background: color-mix(in srgb, var(--c) 20%, var(--card)); box-shadow: inset 3px 0 0 var(--c); font-weight: 600; }
+html[data-layout] .cm-ev.all::before { display: none; }
+html[data-layout] .cm-ev.gone { opacity: .55; }
+html[data-layout] .cm-tm { flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+html[data-layout] .cm-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+html[data-layout] .cm-more { align-self: flex-start; height: 20px; padding: 0 6px; border: 0; border-radius: 4px; background: none; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+html[data-layout] .cm-more:hover { background: var(--hover); color: var(--fg); }
+html[data-layout] .cm-dn:focus-visible, html[data-layout] .cm-ev:focus-visible, html[data-layout] .cm-more:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+@media (max-width: 860px) {
+  html[data-layout] .cal-ctrl .cal-modes button { padding: 0 8px; }
+  html[data-layout] .cm-cell { padding: 2px; }
+  html[data-layout] .cm-wd { padding: 0 2px 4px; text-align: center; }
+  html[data-layout] .cm-dn { align-self: center; }
+  html[data-layout] .cm-ev { height: 6px; padding: 0; border-radius: 3px; background: var(--c) !important; box-shadow: none !important; }
+  html[data-layout] .cm-ev > *, html[data-layout] .cm-ev::before { display: none; }
+  html[data-layout] .cm-more { align-self: center; height: 16px; padding: 0; font-size: 11px; }
+}
+
+/* Settings → Data → Export */
+html[data-layout] .setting.setting-col { flex-direction: column; align-items: stretch; gap: 12px; }
+html[data-layout] .export-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+html[data-layout] .sel { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
+html[data-layout] .sel select {
+  height: 36px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--fg);
+  font: inherit; font-size: 14px; font-weight: 400; min-width: 0;
+}
+html[data-layout] .sel select:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+html[data-layout] .export-act { display: flex; align-items: center; gap: 12px; }
+html[data-layout] .export-act .btn { display: inline-flex; align-items: center; gap: 8px; }
+html[data-layout] .export-act .btn .ic { width: 16px; height: 16px; }
+html[data-layout] .export-size { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+@media (max-width: 860px) {
+  html[data-layout] .export-row { grid-template-columns: 1fr; }
+  html[data-layout] .sel select { height: 44px; font-size: 16px; }
+}
+
+/* =====================================================================
+   Split view (second pane on the right, desktop)
+   ===================================================================== */
+.app.split { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--p2-w, 44vw) auto; }
+.app.split.side-closed { grid-template-columns: 0 minmax(0, 1fr) var(--p2-w, 44vw) auto; }
+.pane2 { position: relative; display: flex; min-width: 0; min-height: 0; border-left: 1px solid var(--line); background: var(--bg); }
+.pane2[hidden] { display: none; }
+.pane2 iframe { flex: 1; width: 100%; height: 100%; border: 0; background: var(--bg); }
+.p2-div { position: absolute; left: -4px; top: 0; bottom: 0; width: 7px; z-index: 5; cursor: col-resize; touch-action: none; }
+.p2-div:hover, .app.p2-drag .p2-div { background: color-mix(in srgb, var(--accent-2) 35%, transparent); }
+.app.p2-drag iframe { pointer-events: none; }
+.app.p2-drag { cursor: col-resize; user-select: none; }
+.split-btn[aria-pressed="true"] { background: var(--hover); color: var(--fg); }
+@media (max-width: 999px) {
+  .split-btn, .pane2 { display: none !important; }
+  .app.split { grid-template-columns: var(--side-w) minmax(0, 1fr) auto; }
+  .app.split.side-closed { grid-template-columns: 0 minmax(0, 1fr) auto; }
+}
+/* inside the pane */
+html.embed .sidebar, html.embed .tabbar, html.embed #sideToggle, html.embed #backBtn, html.embed .split-btn,
+html.embed .status, html.embed .scrim, html.embed .update-bar { display: none !important; }
+html.embed .app, html.embed .app.side-closed { grid-template-columns: minmax(0, 1fr) auto !important; }
+html.embed .main-head { padding-left: 16px !important; }
+html.embed .view { padding-bottom: 0 !important; }
+html.embed[data-layout] .page { padding-bottom: 32px !important; }
+.p2-pick { position: relative; display: inline-flex; align-items: center; }
+.p2-pick select {
+  appearance: none; -webkit-appearance: none; height: 32px; padding: 0 28px 0 8px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--card); color: var(--fg); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.p2-pick select:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.p2-pick .ic { position: absolute; right: 8px; width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.menu.ctx { position: fixed; z-index: 90; min-width: 200px; display: flex; flex-direction: column; }
+.menu.ctx button .ic { width: 16px; height: 16px; color: var(--muted); }
+html.embed .crumbs { display: flex !important; }
+html.embed #p2Close { margin-left: 4px; }
+@media (max-width: 860px) {
+  html[data-layout] .head-actions .cal-ctrl { margin-right: 0; gap: 0; }
+  html[data-layout] .head-actions .cal-nav { gap: 0; }
+  html[data-layout] .head-actions .cal-nav .btn { height: 36px; padding: 0 12px; }
+  html[data-layout] .head-actions .cal-nav .ibtn { width: 40px; height: 40px; }
+  html[data-layout] .cal-bar .cal-ctrl { width: auto; }
+  html[data-layout] .cg-adl { white-space: nowrap; font-size: 10px; padding-right: 2px; }
+  html[data-layout] .cm-cell { gap: 2px; }
+}

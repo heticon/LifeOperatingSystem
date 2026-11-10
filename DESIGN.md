@@ -101,9 +101,15 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 
 ### Calendar (week / day grid)
 - The one place with tinted fills (Bohdan asked for Google-like colour blocks): event block = `color-mix(event colour 20%, --card)` + 3px solid left edge in the event colour; text stays `--fg`, time in mono `--muted`.
-- Event colour: Google event colour (`colorId` → modern Google palette) or the calendar's colour.
+- Event colour: Google event colour (`colorId`) first; then Bohdan's own colours by title (`TITLE_COLORS` in app.js, sampled from his Google Calendar: Morning routine #C9D1D9, Focus #4F6D9A, Light focus #A9BBD8, Free time #AFC3E7, School #2E7D6B, Work #D4B896, Home #B7A7D9, Training #E17C68, Wind down #D8A7B1); then the calendar colour (Schedule #B39DDB).
+- Controls (Day / Week / Month / List, Fit–Zoom, Today, ‹ ›) live in the top bar on desktop; on phones the view switch stays under the title and Today/arrows go to the top bar. Title and sub share one line on desktop.
+- Fit (default) squeezes the day onto one screen; Zoom = 56px hours (48px phones), full 00–24, scrolls.
+- Month: only calendars marked "Show in Month view" (Schedule off by default). Desktop cells list "time + title" (all-day = tinted chip), phones show 6px colour bars; "+N more" opens the day.
 - The whole day fits on one screen: hours run from the earliest to the latest event (at least 07–21) and the hour height is fitted to the space (18–64px); only below 18px does the grid scroll. Hairline per hour, today column 5% `--accent-2` wash, "now" line 2px `--danger`.
 - Past events 55% opacity; current event gets a 1px outline in its colour. Details open in a popover (desktop) or bottom sheet (phone).
+
+### Split view (desktop ≥ 1000px)
+- Second pane on the right = the same app in an iframe (`?pane=1`, class `html.embed`: no sidebar/tab bar/sync). Open with the split button in the top bar or right-click a sidebar item → "Open on the right". The pane header is a section picker + close; nothing extra shows while there is only one pane. Divider drags (min 320px each side). Both panes share localStorage; the main window syncs.
 
 ### Home
 - Left-aligned: weekday + date (20px), clock below, then a definition list (label 14px `--muted`, value 15px `--fg`) separated by hairlines. No icon tiles.

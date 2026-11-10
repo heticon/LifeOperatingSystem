@@ -35,6 +35,42 @@ window.LIFEOS_THEMES = {
     fg: "#EDEDE8", muted: "#A6A69F", faint: "#5E5E58", accent: "#EDEDE8", onAccent: "#1A1A18",
     accent2: "#A9A3F8", danger: "#F87171"
   },
+  sand: {
+    name: "Sand", dark: false,
+    bg: "#F5F1EA", side: "#EFEAE1", card: "#FFFDF9", hover: "#E8E1D5", line: "#DDD5C7",
+    fg: "#1C1915", muted: "#655C50", faint: "#B0A696", accent: "#1C1915", onAccent: "#F5F1EA",
+    accent2: "#8A4B14", danger: "#B91C1C"
+  },
+  mist: {
+    name: "Mist", dark: false,
+    bg: "#F2F5F8", side: "#EBF0F4", card: "#FFFFFF", hover: "#E2E8EE", line: "#D3DCE4",
+    fg: "#0F1720", muted: "#526070", faint: "#A3AEB9", accent: "#1D4ED8", onAccent: "#FFFFFF",
+    accent2: "#1D4ED8", danger: "#B91C1C"
+  },
+  rose: {
+    name: "Rose", dark: false,
+    bg: "#F8F3F3", side: "#F3ECEC", card: "#FFFFFF", hover: "#EEE3E3", line: "#E2D4D4",
+    fg: "#1D1416", muted: "#69585B", faint: "#B7A6A9", accent: "#9F1239", onAccent: "#FFFFFF",
+    accent2: "#9F1239", danger: "#B91C1C"
+  },
+  nord: {
+    name: "Nord", dark: true,
+    bg: "#1E222A", side: "#22262F", card: "#272C36", hover: "#2F3542", line: "#3B4252",
+    fg: "#ECEFF4", muted: "#AAB3C3", faint: "#5E6779", accent: "#88C0D0", onAccent: "#1E222A",
+    accent2: "#88C0D0", danger: "#F28B82"
+  },
+  forest: {
+    name: "Forest", dark: true,
+    bg: "#0F1411", side: "#121915", card: "#18201B", hover: "#1F2923", line: "#2A362E",
+    fg: "#EEF3EF", muted: "#A2B0A6", faint: "#56635A", accent: "#6FCF97", onAccent: "#0F1411",
+    accent2: "#6FCF97", danger: "#F87171"
+  },
+  midnight: {
+    name: "Midnight", dark: true,
+    bg: "#0B1020", side: "#0E1426", card: "#131A30", hover: "#1A2240", line: "#26304F",
+    fg: "#EEF1FA", muted: "#A3ABC4", faint: "#4F5875", accent: "#8AB4FF", onAccent: "#0B1020",
+    accent2: "#8AB4FF", danger: "#F87171"
+  },
   carbon: {
     name: "Carbon", dark: true,
     bg: "#0C0C09", side: "#10100D", card: "#171714", hover: "#1F1F1B", line: "#2B2B26",
@@ -64,6 +100,12 @@ window.lifeosApplyTheme = function (choice) {
 };
 
 // Layout: "apple" = Simple (tab bar, large titles, sheets) or "obsidian" (sidebar tree, breadcrumbs, side panel)
+// Text size: whole interface a bit smaller or bigger (s / m / l)
+window.lifeosApplySize = function (choice) {
+  document.documentElement.style.zoom = choice === "s" ? "0.92" : choice === "l" ? "1.1" : "";
+  document.documentElement.dataset.size = choice || "m";
+};
+
 window.lifeosApplyLayout = function (choice) {
   document.documentElement.dataset.layout = choice === "obsidian" ? "obsidian" : "apple";
 };
@@ -76,4 +118,5 @@ window.lifeosApplyLayout = function (choice) {
   } catch (e) {}
   window.lifeosApplyTheme(theme);
   window.lifeosApplyLayout(layout);
+  try { window.lifeosApplySize(localStorage.getItem("lifeos.size") || "m"); } catch (e) {}
 })();
