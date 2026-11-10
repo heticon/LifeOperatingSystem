@@ -6,3 +6,6 @@ verify_jwt = false   # the function checks the user itself (works with the new p
 
 [functions.google-sync]
 verify_jwt = false   # pg_cron calls it without a user
+
+[functions.lifeos-mcp]
+verify_jwt = false   # tokens come from Supabase's OAuth server; the function checks them itself (and RLS applies)

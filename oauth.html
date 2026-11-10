@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Life OS · Connect</title>
+<style>
+  :root { --bg: #F4F4F1; --card: #FFFFFF; --fg: #0C0C09; --muted: #5F5F59; --line: #DCDCD6; --accent: #0C0C09; --on-accent: #F4F4F1; --danger: #DC2626; --ring: #312C85; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111110; --card: #1A1A18; --fg: #EDEDEA; --muted: #A3A39D; --line: #2A2A27; --accent: #EDEDEA; --on-accent: #111110; --danger: #F87171; --ring: #A9A4F5; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "Open Sans", system-ui, sans-serif; }
+  main { max-width: 400px; margin: 0 auto; padding: 96px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.15; letter-spacing: -0.03em; margin: 0 0 8px; }
+  p { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 24px; }
+  ul { margin: 0 0 24px; padding: 0; list-style: none; }
+  li { padding: 12px 0; border-top: 1px solid var(--line); font-size: 15px; }
+  li:first-child { border-top: 0; padding-top: 0; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 0 0 4px; }
+  input { width: 100%; height: 44px; padding: 0 12px; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+  .row { display: flex; gap: 8px; }
+  button { flex: 1; height: 44px; border-radius: 6px; font: 600 14px/1 inherit; font-family: inherit; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+  button.solid { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: default; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .err { color: var(--danger); font-size: 14px; margin: 16px 0 0; }
+  .meta { font: 500 13px/1.4 ui-monospace, Menlo, monospace; color: var(--muted); margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Connect to Life OS</h1>
+  <p id="sub">Loading…</p>
+  <div class="card" id="box" hidden></div>
+  <p class="err" id="err" hidden></p>
+</main>
+<script src="vendor/supabase.js"></script>
+<script>
+(function () {
+  var URL_ = "https://ulezusdpxglednvswkyk.supabase.co", KEY = "sb_publishable_RCK_PYOpusB7LcupzeDf_g_BOzeB8ev";
+  var client = window.supabase.createClient(URL_, KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: "lifeos.auth", detectSessionInUrl: false }
+  });
+  var authId = new URLSearchParams(location.search).get("authorization_id");
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function fail(msg) { $("err").textContent = msg; $("err").hidden = false; }
+  function sub(t) { $("sub").textContent = t; }
+
+  function signInForm() {
+    sub("Sign in with your Life OS account to continue.");
+    $("box").innerHTML = '<form id="f"><label for="em">Email</label><input id="em" type="email" autocomplete="username" required>' +
+      '<label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" required>' +
+      '<div class="row"><button class="solid" type="submit">Sign in</button></div></form>';
+    $("box").hidden = false;
+    $("f").addEventListener("submit", async function (e) {
+      e.preventDefault(); $("err").hidden = true;
+      var b = e.target.querySelector("button"); b.disabled = true;
+      var r = await client.auth.signInWithPassword({ email: $("em").value.trim(), password: $("pw").value });
+      b.disabled = false;
+      if (r.error) return fail(r.error.message);
+      consent();
+    });
+  }
+
+  async function decide(approve) {
+    $("box").querySelectorAll("button").forEach(function (b) { b.disabled = true; });
+    var r = approve ? await client.auth.oauth.approveAuthorization(authId) : await client.auth.oauth.denyAuthorization(authId);
+    if (r.error) { fail(r.error.message); $("box").querySelectorAll("button").forEach(function (b) { b.disabled = false; }); return; }
+    sub(approve ? "Connected. Returning…" : "Cancelled. Returning…");
+    $("box").hidden = true;
+    location.href = r.data.redirect_url || r.data.redirect_to;
+  }
+
+  async function consent() {
+    var r = await client.auth.oauth.getAuthorizationDetails(authId);
+    if (r.error) return fail(r.error.message);
+    var d = r.data || {};
+    if (!d.authorization_id && (d.redirect_url || d.redirect_to)) { location.href = d.redirect_url || d.redirect_to; return; } // already approved
+    var s = await client.auth.getSession(), email = s.data.session ? s.data.session.user.email : "";
+    var name = (d.client && (d.client.name || d.client.client_name)) || "An app";
+    $("title").textContent = "Allow " + name + "?";
+    sub(name + " wants to use your Life OS as " + email + ".");
+    $("box").innerHTML = "<ul><li>Read your tasks, homework, timetable and calendar</li><li>Add and change tasks and homework</li><li>It cannot change your Google Calendar or your password</li></ul>" +
+      '<div class="row"><button type="button" id="no">Cancel</button><button type="button" class="solid" id="yes">Allow</button></div>' +
+      '<div class="meta">' + esc(d.redirect_uri || "") + "</div>";
+    $("box").hidden = false;
+    $("yes").onclick = function () { decide(true); };
+    $("no").onclick = function () { decide(false); };
+  }
+
+  (async function () {
+    if (!authId) { sub("This page is opened by an app that connects to Life OS. Nothing to do here."); return; }
+    var s = await client.auth.getSession();
+    if (s.data.session) consent(); else signInForm();
+  })().catch(function (e) { fail(e.message || String(e)); });
+})();
+</script>
+</body>
+</html>

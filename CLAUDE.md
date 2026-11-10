@@ -51,5 +51,9 @@ Personal "Life OS" of Bohdan (18, Ukrainian student in Hamburg, Germany). A smal
    - pg_cron job `google-sync` every 15 min (`supabase/cron.sql`). `privacy.html` is the consent-screen privacy link. `.nojekyll` is required (Pages Jekyll build failed).
    - Month view needs a longer window: calendars with `month` on are read −35/+185 days; others (the daily Schedule) ±28. `month` lives on the `gcal:*` row (user choice, kept by the server).
    - v0.13: Month view, Fit/Zoom, Bohdan's title colours, Export (Settings → Data: `export.js`, Markdown/JSON/HTML/TXT/ZIP, compact with a legend), Split view (iframe `?pane=1`), themes Sand/Mist/Rose/Nord/Forest/Midnight, Text size (`lifeos.size`, CSS zoom).
-5. Life OS connector (MCP) on a Cloudflare Worker with OAuth, so Claude can read and write his tasks/homework/events.
+5. ✅ Life OS connector (MCP) — Supabase Edge Function `lifeos-mcp` (no Cloudflare needed). URL for Claude: `https://ulezusdpxglednvswkyk.supabase.co/functions/v1/lifeos-mcp`.
+   - Sign-in = Supabase Auth **OAuth 2.1 server** (dashboard → Authentication → OAuth Server: on, dynamic client registration on, authorization path → `oauth.html`). Consent page `oauth.html` (sign in + Allow/Cancel).
+   - The function serves `/.well-known/oauth-protected-resource` and answers 401 with `WWW-Authenticate`. It uses the caller's token with the publishable key, so RLS limits it to his rows; no secret key.
+   - Tools: today, list_tasks, add_task, update_task, delete_task, list_homework, add_homework, update_homework, list_events, get_timetable. Writes go to `items` like a device; apps pick them up via realtime.
+   - Deploy: `npx supabase functions deploy lifeos-mcp --remote=ulezusdpxglednvswkyk --use-api`.
 6. Google Drive.
