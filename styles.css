@@ -1637,3 +1637,10 @@ html.embed #p2Close { margin-left: 4px; }
   html[data-layout] .cg-adl { white-space: nowrap; font-size: 10px; padding-right: 2px; }
   html[data-layout] .cm-cell { gap: 2px; }
 }
+/* Day view: the week strip already names the day — no second header */
+html[data-layout] .cal-grid[style*="--days:1"] .cg-heads { display: none; }
+@media (min-width: 861px) {
+  html[data-layout] .cal-strip { margin-bottom: 8px; }
+  html[data-layout] .cs-day { min-height: 0; flex-direction: row; justify-content: center; gap: 8px; padding: 6px 0; }
+  html[data-layout] .cs-day .cs-dot { display: none; }
+}
