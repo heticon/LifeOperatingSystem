@@ -45,7 +45,10 @@
   var authId = new URLSearchParams(location.search).get("authorization_id");
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
-  function fail(msg) { $("err").textContent = msg; $("err").hidden = false; }
+  function fail(msg) {
+    if ($("box").hidden) sub("Could not open this request. Start the connection again from Claude.");
+    $("err").textContent = msg; $("err").hidden = false;
+  }
   function sub(t) { $("sub").textContent = t; }
 
   function signInForm() {
