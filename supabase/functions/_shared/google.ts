@@ -128,6 +128,9 @@ export async function syncUser(db: SupabaseClient, userId: string) {
       .eq("user_id", userId).eq("deleted", false).in("kind", ["calendar", "event"]);
     if (error) throw error;
     const have = new Map<string, any>(rows!.map((r) => [r.id, r]));
+    // the user's choices live in "gpref:<cal>" rows that only devices write (so this sync never overwrites them)
+    const { data: prefRows } = await db.from("items").select("id, data").eq("user_id", userId).eq("deleted", false).eq("kind", "calpref");
+    const pref = new Map<string, any>((prefRows || []).map((r) => [r.data.cal, r.data]));
     const want = new Map<string, { kind: string; data: any }>();
 
     const cals = await gget(token, "/users/me/calendarList", { maxResults: "250" });
@@ -135,9 +138,12 @@ export async function syncUser(db: SupabaseClient, userId: string) {
     for (const c of cals) {
       const id = "gcal:" + c.id, prev = have.get(id);
       const name = c.summaryOverride || c.summary || c.id;
-      const enabled = prev ? prev.data.on !== false : true; // new calendars start on; the user's choice is kept
-      // month: shown in the Month view; the daily "Schedule" calendar is off by default, the user's choice is kept
-      const month = prev && typeof prev.data.month === "boolean" ? prev.data.month : !/^schedule$/i.test(String(name).trim());
+      const p = pref.get(c.id);
+      // new calendars start on; the user's choice (gpref, or the older one on this row) is kept
+      const enabled = p && typeof p.on === "boolean" ? p.on : prev ? prev.data.on !== false : true;
+      // month: shown in the Month view; the daily "Schedule" calendar is off by default
+      const month = p && typeof p.month === "boolean" ? p.month
+        : prev && typeof prev.data.month === "boolean" ? prev.data.month : !/^schedule$/i.test(String(name).trim());
       want.set(id, { kind: "calendar", data: { cal: c.id, name,
         color: c.backgroundColor || "#888888", primary: !!c.primary, on: enabled, month } });
       if (enabled) on.push({ id: c.id, long: month });

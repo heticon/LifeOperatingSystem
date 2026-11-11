@@ -102,7 +102,8 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 ### Calendar (week / day grid)
 - The one place with tinted fills (Bohdan asked for Google-like colour blocks): event block = `color-mix(event colour 20%, --card)` + 3px solid left edge in the event colour; text stays `--fg`, time in mono `--muted`.
 - Event colour: Google event colour (`colorId`) first; then Bohdan's own colours by title (`TITLE_COLORS` in app.js, sampled from his Google Calendar: Morning routine #C9D1D9, Focus #4F6D9A, Light focus #A9BBD8, Free time #AFC3E7, School #2E7D6B, Work #D4B896, Home #B7A7D9, Training #E17C68, Wind down #D8A7B1); then the calendar colour (Schedule #B39DDB).
-- Controls (Day / Week / Month / List, Fit–Zoom, Today, ‹ ›) live in the top bar on desktop; on phones the view switch stays under the title and Today/arrows go to the top bar. Title and sub share one line on desktop.
+- Controls (Day / Week / Month / List, Fit–Zoom, Today, ‹ ›) live in the top bar on desktop; on phones a small "Day ▾" View button sits right of the title (menu) and Today/arrows go to the top bar. Title and sub share one line on desktop.
+- This week shows only calendars marked "Show in Month view and This week" (not the daily Schedule).
 - Fit (default) squeezes the day onto one screen; Zoom = 56px hours (48px phones), full 00–24, scrolls.
 - Month: only calendars marked "Show in Month view" (Schedule off by default). Desktop cells list "time + title" (all-day = tinted chip), phones show 6px colour bars; "+N more" opens the day.
 - The whole day fits on one screen: hours run from the earliest to the latest event (at least 07–21) and the hour height is fitted to the space (18–64px); only below 18px does the grid scroll. Hairline per hour, today column 5% `--accent-2` wash, "now" line 2px `--danger`.
@@ -115,7 +116,14 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 - Left-aligned: weekday + date (20px), clock below, then a definition list (label 14px `--muted`, value 15px `--fg`) separated by hairlines. No icon tiles.
 
 ### Tab bar (Simple layout, phones)
+- Home · up to 2 pinned sections · Browse · Settings (pins: Settings → Appearance → Tab bar, stored per device in `lifeos.pins`).
+- Browse lists every section (Plan, Tasks, School, Tools); pages that aren't pinned get a "‹ Browse" back button.
 - `--side` background, 1px `--line` top border, 22px icons, 12px labels; active `--fg` 600, inactive `--muted`.
+
+### Links
+- Grid of tiles grouped by name: 32px logo (40px on phones) + 14px name; desktop tiles = `--card` + 1px `--line`, phones = no frame, 4 per row. Opens in a new tab.
+- Logos: Google's favicon service; Google apps use their product logos (ssl.gstatic.com); offline → first letter.
+- Edit → tap a tile to change/delete; + adds (name, address, group).
 
 ## 4. Accessibility (testable)
 

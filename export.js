@@ -65,7 +65,7 @@
     var cals = [], events = [];
     if (opts.cal !== "none") {
       var o = D.other || {}, cm = {};
-      Object.keys(o).forEach(function (id) { var x = o[id]; if (x && x.k === "calendar") cm[x.d.cal] = x.d; });
+      L.calendars().forEach(function (c) { cm[c.cal] = c; }); // includes the user's shown / Month choices
       var used = {}, abbr = {};
       Object.keys(cm).forEach(function (id) {
         var c = cm[id]; if (c.on === false) return;
