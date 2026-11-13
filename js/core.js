@@ -130,6 +130,8 @@ Store.load();
 function tasks() { return Store.data.tasks; }
 function projects() { return Store.data.projects; }
 function taskById(id) { return tasks().find(function (t) { return t.id === id; }); }
+// project tasks show in To-dos only when added there (todo: true)
+function inTodos(t) { return !t.projectId || !!t.todo; }
 function projectById(id) { return projects().find(function (p) { return p.id === id; }); }
 
 function addTask(title, extra) {

@@ -1590,3 +1590,13 @@ html[data-layout] .head-actions [data-lk-edit] { height: 32px; }
   html[data-layout] .lk-fields input { height: 44px; font-size: 16px; }
   html[data-layout] .lk-actions .btn { height: 44px; padding: 0 16px; }
 }
+
+/* v0.15 — project task → To-dos button */
+html[data-layout] .task .todo-pin { flex: none; align-self: center; margin: -8px -4px -8px 0; color: var(--muted); }
+html[data-layout] .task .todo-pin:hover { color: var(--fg); }
+html[data-layout] .task .todo-pin.on { color: var(--accent-2); }
+@media (hover: hover) and (min-width: 768px) {
+  html[data-layout] .task .todo-pin:not(.on) { opacity: 0; }
+  html[data-layout] .task:hover .todo-pin, html[data-layout] .task .todo-pin:focus-visible { opacity: 1; }
+}
+@media (max-width: 767px) { html[data-layout] .task .todo-pin { width: 44px; height: 44px; } }

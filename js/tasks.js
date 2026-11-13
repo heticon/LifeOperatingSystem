@@ -15,6 +15,7 @@ function metaFor(t, ctx) {
     var label = t.week === cw ? (t.day != null ? DAYS_S[t.day] : "This week") : "Week " + weekNumOfKey(t.week) + (t.day != null ? ", " + DAYS_S[t.day] : "");
     out.push("<span>" + icon("calendar") + label + "</span>");
   }
+  if (ctx === "project" && t.todo) out.push("<span>" + icon("list-todo") + "In To-dos</span>");
   if (t.notes && t.notes.trim()) out.push('<span class="note" title="Has notes">' + icon("pencil") + "</span>");
   return out.length ? '<span class="task-meta">' + out.join("") + "</span>" : "";
 }
@@ -22,7 +23,13 @@ function metaFor(t, ctx) {
 function taskRow(t, ctx) {
   return '<div class="task' + (t.done ? " done" : "") + (ui.selected === t.id ? " sel" : "") + '" data-task="' + t.id + '">' +
     '<button type="button" class="check" role="checkbox" aria-checked="' + t.done + '" aria-label="Done">' + icon("check") + "</button>" +
-    '<div class="task-main"><span class="task-title">' + esc(t.title) + "</span>" + metaFor(t, ctx) + "</div></div>";
+    '<div class="task-main"><span class="task-title">' + esc(t.title) + "</span>" + metaFor(t, ctx) + "</div>" +
+    (ctx === "project" ? todoPin(t) : "") + "</div>";
+}
+function todoPin(t) {
+  var lbl = t.todo ? "Remove from To-dos" : "Add to To-dos";
+  return '<button type="button" class="ibtn todo-pin' + (t.todo ? " on" : "") + '" data-todo-pin aria-pressed="' + !!t.todo + '" title="' + lbl + '" aria-label="' + lbl + '">' +
+    icon(t.todo ? "list-minus" : "list-plus") + "</button>";
 }
 
 function addRow(key, placeholder, ghost) {
@@ -44,8 +51,9 @@ function byDoneDesc(a, b) { return (b.doneAt || 0) - (a.doneAt || 0); }
 /* ---------- To-dos ---------- */
 function renderTodos() {
   $("headActions").innerHTML = "";
-  var open = tasks().filter(function (t) { return !t.done; }).sort(byCreatedDesc);
-  var done = tasks().filter(function (t) { return t.done; }).sort(byDoneDesc);
+  var mine = tasks().filter(inTodos);
+  var open = mine.filter(function (t) { return !t.done; }).sort(byCreatedDesc);
+  var done = mine.filter(function (t) { return t.done; }).sort(byDoneDesc);
   $("view").innerHTML =
     '<div class="page">' +
       '<div class="page-head"><div><h1>To-dos</h1><div class="page-sub">' +
@@ -53,7 +61,7 @@ function renderTodos() {
       "</div></div></div>" +
       addRow("todos", "New task") +
       '<div class="list">' + open.map(function (t) { return taskRow(t, "todos"); }).join("") + "</div>" +
-      (open.length ? "" : '<div class="empty">Type a task above and press Enter. Click a task to add it to a week or a project.</div>') +
+      (open.length ? "" : '<div class="empty">Type a task above and press Enter. Project tasks show here when you add them to To-dos.</div>') +
       doneSection("todos", done, "todos") +
     "</div>";
 }
@@ -165,9 +173,57 @@ $("view").addEventListener("click", function (e) {
   var row = e.target.closest(".task"); if (!row) return;
   var isHw = row.hasAttribute("data-hw");
   var id = row.getAttribute(isHw ? "data-hw" : "data-task");
+  if (!isHw && e.target.closest("[data-todo-pin]")) { toggleTodo(id); return; }
   if (e.target.closest(".check")) { if (isHw) toggleHw(id, row); else toggleDone(id, row); return; }
   if (ui.route.name === "focus") { pickFocus(isHw ? "hw" : "task", id); return; }
   openDetail(id, isHw ? "hw" : "task");
+});
+
+function toggleTodo(id) {
+  var t = taskById(id); if (!t || !t.projectId) return;
+  updateTask(id, { todo: !t.todo });
+  renderAll(); if (ui.selected === id) renderDetail();
+}
+
+/* right-click (or long-press on phones) a project task → add to / remove from To-dos */
+function openTaskCtx(t, x, y) {
+  var old = document.querySelector(".menu"); if (old) old.remove();
+  var m = document.createElement("div");
+  m.className = "menu ctx"; m.setAttribute("role", "menu");
+  m.innerHTML = '<button type="button" role="menuitem" data-ctx="todo">' + icon(t.todo ? "list-minus" : "list-plus") + "<span>" + (t.todo ? "Remove from To-dos" : "Add to To-dos") + "</span></button>" +
+    '<button type="button" role="menuitem" data-ctx="project">' + icon("folder") + "<span>Open project</span></button>";
+  document.body.appendChild(m);
+  m.style.left = Math.max(8, Math.min(x, window.innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = Math.max(8, Math.min(y, window.innerHeight - m.offsetHeight - 8)) + "px";
+  m.addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-ctx]"); if (!b) return;
+    m.remove();
+    if (b.getAttribute("data-ctx") === "todo") toggleTodo(t.id); else location.hash = "project-" + t.projectId;
+  });
+  m.querySelector("button").focus();
+}
+function ctxTask(target) {
+  var row = target.closest && target.closest(".task[data-task]");
+  var t = row && taskById(row.getAttribute("data-task"));
+  return t && t.projectId ? t : null;
+}
+$("view").addEventListener("contextmenu", function (e) {
+  var t = ctxTask(e.target); if (!t) return;
+  e.preventDefault(); openTaskCtx(t, e.clientX, e.clientY);
+});
+var lp = null;
+$("view").addEventListener("touchstart", function (e) {
+  var t = ctxTask(e.target); if (!t || e.touches.length > 1) return;
+  var p = e.touches[0], x = p.clientX, y = p.clientY;
+  lp = { x: x, y: y, timer: setTimeout(function () { lp.fired = true; if (navigator.vibrate) navigator.vibrate(10); openTaskCtx(t, x, y); }, 500) };
+}, { passive: true });
+$("view").addEventListener("touchmove", function (e) {
+  if (lp && Math.hypot(e.touches[0].clientX - lp.x, e.touches[0].clientY - lp.y) > 10) { clearTimeout(lp.timer); lp = null; }
+}, { passive: true });
+$("view").addEventListener("touchend", function (e) {
+  if (!lp) return; clearTimeout(lp.timer);
+  if (lp.fired) e.preventDefault(); // keep the menu open: no click on the row
+  lp = null;
 });
 
 function toggleDone(id, row) {
@@ -220,7 +276,7 @@ function openProjectMenu(btn) {
         m.remove(); renderAll();
       });
     } else if (act === "delete") {
-      m.innerHTML = "<p>Delete “" + esc(p.name) + "”? Its tasks will stay in To-dos.</p>" +
+      m.innerHTML = "<p>Delete “" + esc(p.name) + "”? Its tasks will move to To-dos.</p>" +
         '<div class="row"><button type="button" class="btn" data-a="cancel">Cancel</button>' +
         '<button type="button" class="btn danger" data-a="confirm">Delete</button></div>';
     } else if (act === "cancel") { main(); }
@@ -275,6 +331,8 @@ function renderTaskDetail() {
       "</div>" +
       '<div class="props">' +
         '<div class="prop"><span class="prop-k">' + icon("folder") + 'Project</span><div class="sel-wrap"><select id="dProject">' + pOpts + "</select>" + icon("chevron-down") + "</div></div>" +
+        (t.projectId ? '<div class="prop"><span class="prop-k">' + icon("list-todo") + 'To-dos</span><div class="sel-wrap"><select id="dTodo">' +
+          '<option value="1"' + (t.todo ? " selected" : "") + '>Shown in To-dos</option><option value=""' + (t.todo ? "" : " selected") + ">Project only</option></select>" + icon("chevron-down") + "</div></div>" : "") +
         '<div class="prop"><span class="prop-k">' + icon("calendar-days") + 'Week</span><div class="sel-wrap"><select id="dWeek">' + weekOptions(t) + "</select>" + icon("chevron-down") + "</div></div>" +
         '<div class="prop"><span class="prop-k">' + icon("calendar") + 'Day</span><div class="sel-wrap"><select id="dDay"' + (t.week ? "" : " disabled") + ">" + dOpts + "</select>" + icon("chevron-down") + "</div></div>" +
       "</div>" +
@@ -298,7 +356,12 @@ function renderTaskDetail() {
   $("dCheck").addEventListener("click", function () {
     updateTask(t.id, { done: !t.done }); $("dCheck").setAttribute("aria-checked", String(t.done)); renderMain();
   });
-  $("dProject").addEventListener("change", function (e) { updateTask(t.id, { projectId: e.target.value || null }); renderMain(); });
+  $("dProject").addEventListener("change", function (e) {
+    var v = e.target.value || null, patch = { projectId: v };
+    if (v && !t.projectId) patch.todo = true; // a to-do moved into a project stays in To-dos
+    updateTask(t.id, patch); renderMain(); renderDetail();
+  });
+  if ($("dTodo")) $("dTodo").addEventListener("change", function (e) { updateTask(t.id, { todo: !!e.target.value }); renderMain(); });
   $("dWeek").addEventListener("change", function (e) {
     var v = e.target.value || null; updateTask(t.id, v ? { week: v } : { week: null, day: null });
     renderMain(); renderDetail();

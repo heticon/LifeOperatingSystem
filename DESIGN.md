@@ -120,6 +120,11 @@ Scale: **4 / 8 / 12 / 16 / 24 / 32**. Page-level gaps use multiples of 32 (64, 9
 - Browse lists every section (Plan, Tasks, School, Tools); pages that aren't pinned get a "‹ Browse" back button.
 - `--side` background, 1px `--line` top border, 22px icons, 12px labels; active `--fg` 600, inactive `--muted`.
 
+### Project tasks and To-dos
+- A task made in a project stays in the project only. The list button at the right of a project row (`list-plus` / `list-minus`, `--accent-2` when on, hover-only on desktop when off) adds it to To-dos; the row then says “In To-dos”.
+- Remove from To-dos: right-click (desktop) or long-press (phone) a project task → “Remove from To-dos”, or the task panel’s To-dos row (Shown in To-dos / Project only).
+- A to-do moved into a project stays in To-dos. Deleting a project moves its tasks to To-dos.
+
 ### Links
 - Grid of tiles grouped by name: 32px logo (40px on phones) + 14px name; desktop tiles = `--card` + 1px `--line`, phones = no frame, 4 per row. Opens in a new tab.
 - Logos: Google's favicon service; Google apps use their product logos (ssl.gstatic.com); offline → first letter.

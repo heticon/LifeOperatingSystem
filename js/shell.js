@@ -41,7 +41,7 @@ function renderSidebar() {
   });
   var open = tasks().filter(function (t) { return !t.done; });
   var cw = weekKey(new Date());
-  $("cntTodos").textContent = open.length || "";
+  $("cntTodos").textContent = open.filter(inTodos).length || "";
   var wk = open.filter(function (t) { return t.week === cw; }).length;
   $("cntWeek").textContent = wk || "";
 

@@ -1,5 +1,5 @@
 // Офлайн-кеш Life OS. Після кожного оновлення програми збільшуй номер версії.
-const VERSION = "lifeos-v18";
+const VERSION = "lifeos-v19";
 const SHELL = [
   "./", "index.html", "styles.css", "themes.js", "js/core.js", "js/shell.js", "js/tasks.js", "js/school.js", "js/focus.js", "js/calendar.js", "js/links.js", "js/nav.js", "js/settings.js", "js/main.js", "export.js", "sync.js", "vendor/supabase.js", "manifest.webmanifest",
   "fonts/inter-latin-wght-normal.woff2", "fonts/inter-latin-ext-wght-normal.woff2", "fonts/inter-cyrillic-wght-normal.woff2",

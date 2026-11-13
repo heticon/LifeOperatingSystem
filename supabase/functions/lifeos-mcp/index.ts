@@ -88,7 +88,7 @@ function taskWhen(t: any) {
   return nice(addDays(mondayOfWeek(t.week), t.day));
 }
 function taskLine(d: Data, t: any) {
-  const bits = [taskWhen(t), d.projectName(t.projectId) && "project: " + d.projectName(t.projectId), t.notes && "notes: " + t.notes].filter(Boolean);
+  const bits = [taskWhen(t), d.projectName(t.projectId) && "project: " + d.projectName(t.projectId) + (t.todo ? " (also in To-dos)" : " (project only)"), t.notes && "notes: " + t.notes].filter(Boolean);
   return `- [${t.done ? "x" : " "}] ${t.title} (id ${t.id})${bits.length ? " · " + bits.join(" · ") : ""}`;
 }
 function hwLine(d: Data, h: any) {
@@ -123,13 +123,13 @@ const DATE = str("Date YYYY-MM-DD (Europe/Berlin)");
 const TOOLS = [
   { name: "today", title: "Today overview", description: "Start here. Today's date and ISO week, school lessons, calendar events, open tasks for today/this week and the inbox, and open homework (overdue first).",
     inputSchema: S({}), annotations: { readOnlyHint: true } },
-  { name: "list_tasks", title: "List tasks", description: "List to-dos. Tasks can sit in the inbox (no date), in a week (any day) or on a day of a week.",
+  { name: "list_tasks", title: "List tasks", description: "List tasks. Tasks can sit in To-dos (no date), in a week (any day) or on a day of a week. Project tasks show in To-dos only when added there (in_todos).",
     inputSchema: S({ status: { type: "string", enum: ["open", "done", "all"], description: "Default open" }, week: str("Only this ISO week, e.g. 2026-W46") }),
     annotations: { readOnlyHint: true } },
   { name: "add_task", title: "Add task", description: "Add a to-do. Give `date` to plan it on a day, or `week` (ISO, e.g. 2026-W47) for 'some day that week', or neither for the inbox.",
-    inputSchema: S({ title: str("Task title"), date: DATE, week: str("ISO week like 2026-W47 (ignored if date is given)"), project: str("Project name (must exist)"), notes: str("Optional notes") }, ["title"]) },
+    inputSchema: S({ title: str("Task title"), date: DATE, week: str("ISO week like 2026-W47 (ignored if date is given)"), project: str("Project name (must exist)"), in_todos: { type: "boolean", description: "With project: also show it in To-dos (default false = project only)" }, notes: str("Optional notes") }, ["title"]) },
   { name: "update_task", title: "Update task", description: "Change a task: mark done/undone, rename, re-plan (date, week, or inbox) or edit notes.",
-    inputSchema: S({ id: str("Task id"), done: { type: "boolean" }, title: str("New title"), date: DATE, week: str("ISO week (sets 'any day that week')"), inbox: { type: "boolean", description: "true = remove date/week" }, notes: str("Replace notes") }, ["id"]) },
+    inputSchema: S({ id: str("Task id"), done: { type: "boolean" }, title: str("New title"), date: DATE, week: str("ISO week (sets 'any day that week')"), inbox: { type: "boolean", description: "true = remove date/week" }, in_todos: { type: "boolean", description: "Project tasks: add to (true) or remove from (false) To-dos" }, notes: str("Replace notes") }, ["id"]) },
   { name: "delete_task", title: "Delete task", description: "Delete a task permanently. Prefer update_task done=true for finished tasks.",
     inputSchema: S({ id: str("Task id") }, ["id"]), annotations: { destructiveHint: true } },
   { name: "list_homework", title: "List homework", description: "List homework with subject, due date and 'do on' plan.",
@@ -157,7 +157,7 @@ async function callTool(d: Data, name: string, a: any): Promise<string> {
       const todayT = tasks.filter((t) => t.week === wk && t.day === di);
       const overdueT = tasks.filter((t) => t.week && t.day != null && addDays(mondayOfWeek(t.week), t.day) < today);
       const weekT = tasks.filter((t) => t.week === wk && t.day == null);
-      const inbox = tasks.filter((t) => !t.week);
+      const inbox = tasks.filter((t) => !t.week && (!t.projectId || t.todo));
       const hw = d.of("homework").filter((h) => !h.done).sort((x, y) => (x.due || "9999") < (y.due || "9999") ? -1 : 1);
       const ev = eventsBetween(d, today, today);
       const sec = (title: string, lines: string[]) => lines.length ? `\n## ${title}\n${lines.join("\n")}` : "";
@@ -166,7 +166,7 @@ async function callTool(d: Data, name: string, a: any): Promise<string> {
         sec("Tasks planned earlier, still open", overdueT.map((t) => taskLine(d, t))) +
         sec("Tasks today", todayT.map((t) => taskLine(d, t))) +
         sec("Tasks this week (any day)", weekT.map((t) => taskLine(d, t))) +
-        sec("Inbox", inbox.map((t) => taskLine(d, t))) +
+        sec("To-dos (no date)", inbox.map((t) => taskLine(d, t))) +
         sec("Open homework", hw.map((h) => hwLine(d, h)));
     }
     case "list_tasks": {
@@ -184,7 +184,7 @@ async function callTool(d: Data, name: string, a: any): Promise<string> {
       if (a.project) {
         const p = d.of("project").find((x) => x.name.toLowerCase() === String(a.project).toLowerCase());
         if (!p) throw new Error(`No project "${a.project}". Existing: ${d.of("project").map((x) => x.name).join(", ") || "none"}`);
-        t.projectId = p.id;
+        t.projectId = p.id; t.todo = !!a.in_todos;
       }
       await d.put(t.id, "task", t);
       return "Added: " + taskLine(d, t);
@@ -195,6 +195,7 @@ async function callTool(d: Data, name: string, a: any): Promise<string> {
       if (typeof a.done === "boolean") { t.done = a.done; t.doneAt = a.done ? Date.now() : null; }
       if (a.title) t.title = String(a.title).trim();
       if (typeof a.notes === "string") t.notes = a.notes;
+      if (typeof a.in_todos === "boolean" && t.projectId) t.todo = a.in_todos;
       if (a.inbox) { t.week = null; t.day = null; } else planTask(t, a);
       await d.put(t.id, "task", t);
       return "Updated: " + taskLine(d, t);

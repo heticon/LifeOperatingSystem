@@ -15,7 +15,7 @@ function renderTasksHub() {
   var open = tasks().filter(function (t) { return !t.done; }), cw = weekKey(new Date());
   $("view").innerHTML = '<div class="page hub"><div class="page-head"><div><h1>Tasks</h1></div></div>' +
     '<div class="list hub-list">' +
-      hubRow("#todos", icon("list-todo", "sq sq-blue"), "To-dos", open.length) +
+      hubRow("#todos", icon("list-todo", "sq sq-blue"), "To-dos", open.filter(inTodos).length) +
       hubRow("#week", icon("calendar-days", "sq sq-red"), "This week", open.filter(function (t) { return t.week === cw; }).length) +
     "</div>" +
     '<div class="section-h"><span>Projects</span></div>' +
@@ -106,7 +106,7 @@ function renderBrowse() {
   var sec = function (title, rows) { return '<div class="section-h"><span>' + title + '</span></div><div class="list hub-list">' + rows.join("") + "</div>"; };
   $("view").innerHTML = '<div class="page hub browse"><div class="page-head"><div><h1>Browse</h1><div class="page-sub">Everything in Life OS</div></div></div>' +
     sec("Plan", [hubRow("#calendar", icon("calendar"), "Calendar", ""), hubRow("#focus", icon("timer"), "Focus", "")]) +
-    sec("Tasks", [hubRow("#todos", icon("list-todo"), "To-dos", open.length),
+    sec("Tasks", [hubRow("#todos", icon("list-todo"), "To-dos", open.filter(inTodos).length),
       hubRow("#week", icon("calendar-days"), "This week", open.filter(function (t) { return t.week === cw; }).length),
       hubRow("#tasks", icon("folder"), "Projects", projects().length)]) +
     sec("School", [hubRow("#timetable", icon("calendar-clock"), "Timetable", ""),

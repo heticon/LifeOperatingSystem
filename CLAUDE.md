@@ -58,4 +58,5 @@ Personal "Life OS" of Bohdan (18, Ukrainian student in Hamburg, Germany). A smal
    - Tools: today, list_tasks, add_task, update_task, delete_task, list_homework, add_homework, update_homework, list_events, get_timetable. Writes go to `items` like a device; apps pick them up via realtime.
    - Deploy: `npx supabase functions deploy lifeos-mcp --remote=ulezusdpxglednvswkyk --use-api`.
    - v0.14: phone tab bar Home · pins · Browse · Settings (`lifeos.pins`), Browse page, Links page (`link:<id>` records in `other`, defaults seeded once with fixed ids + `linkmeta`), calendar View button on phones, This week without the daily Schedule, focus timer synced across panes, calendar choices in `gpref:<cal>` (kind `calpref`, only devices write it; google-sync reads it), old Apple CSS block trimmed.
+   - v0.15: project tasks are separate from To-dos (`todo: true` on a task = also shown in To-dos; `inTodos(t)` in core.js). Add via the list button on project rows, remove via right-click / long-press or the task panel. MCP: `in_todos` on add_task/update_task.
 6. Google Drive.
